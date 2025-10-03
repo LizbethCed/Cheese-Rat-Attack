@@ -1,20 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Cheese Rat Attack</title>
-    <link rel="icon" href="assets/icono/favicon.ico" type="image/png">
-    <style>
-        body { margin:0; padding:0; background-color: #000; }
-        #phaser-example { margin:auto; width:1024px; height:768px; }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.85.0/dist/phaser.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Juego con Menú</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+  <script type="module" src="src/main.js"></script>
+  <style>
+    body {
+      background: #fff;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      box-shadow: 0 0 32px #3bacd9;
+      border-radius: 16px;
+    }
+  </style>
 </head>
-
 <body>
-    <div id="phaser-example"></div>
-
-    <!-- main.js importa todos los demás scripts -->
-    <script type="module" src="./js/main.js"></script>
 </body>
 </html>
