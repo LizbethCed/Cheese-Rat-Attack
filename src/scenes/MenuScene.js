@@ -11,6 +11,7 @@ export default class MenuScene extends Phaser.Scene {
     create() {
     const centerX = this.cameras.main.centerX;
 
+    // Logo
     this.add.image(centerX, 150, "logo").setScale(0.9);
 
     // Opciones de menú
@@ -20,24 +21,40 @@ export default class MenuScene extends Phaser.Scene {
         { texto: "Créditos", escena: "CreditsScene" }
     ];
 
-    this.opcionesTexto = [];
+    const btnWidth = 320;
+    const btnHeight = 64;
+    const btnSpacing = 80;
+    const startY = 320;
 
     opciones.forEach((op, i) => {
-        let txt = this.add.text(centerX, 300 + i * 60, op.texto, {
+        // Botón
+        const btn = this.add.image(centerX, startY + i * btnSpacing, "btnBlue")
+            .setDisplaySize(btnWidth, btnHeight)
+            .setInteractive({ useHandCursor: true });
+
+        // Texto sobre el botón
+        const txt = this.add.text(centerX, startY + i * btnSpacing, op.texto, {
             fontSize: "32px",
-            fill: "#ffffff"
+            fill: "#203c5b",
+            fontFamily: "Arial"
         }).setOrigin(0.5);
 
-        txt.setInteractive({ useHandCursor: true });
-
-        txt.on("pointerover", () => txt.setStyle({ fill: "#f39c12" }));
-        txt.on("pointerout", () => txt.setStyle({ fill: "#ffffff" }));
-        txt.on("pointerdown", () => {
+        // Interactividad
+        btn.on("pointerover", () => btn.setTint(0x99ccff));
+        btn.on("pointerout", () => btn.clearTint());
+        btn.on("pointerdown", () => {
             this.sound.play("click");
             this.scene.start(op.escena);
         });
 
-        this.opcionesTexto.push(txt);
+        // También puedes hacer el texto interactivo si lo prefieres:
+        txt.setInteractive({ useHandCursor: true });
+        txt.on("pointerover", () => btn.setTint(0x99ccff));
+        txt.on("pointerout", () => btn.clearTint());
+        txt.on("pointerdown", () => {
+            this.sound.play("click");
+            this.scene.start(op.escena);
+        });
     });
-}
+    }
 }
