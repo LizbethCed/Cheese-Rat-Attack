@@ -2,7 +2,6 @@ import Projectile from "./Projectile.js";
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, tracks) {
-        // se inicia en la primera ruta
         super(scene, 100, tracks[0].y, "player");
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -21,27 +20,31 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.upKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
         this.downKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
         this.shootKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+        this.enableMovement = true;
+        this.enableShooting = true;
+
+        this.setFlipX(true);
     }
 
     preUpdate(time, delta) {
         super.preUpdate(time, delta);
 
-        // Mover arriba
-        if (Phaser.Input.Keyboard.JustDown(this.upKey)) {
-            this.currentTrackIndex = Phaser.Math.Wrap(this.currentTrackIndex - 1, 0, this.tracks.length);
-            this.y = this.tracks[this.currentTrackIndex].y;
-        }
-        // Mover abajo
-        else if (Phaser.Input.Keyboard.JustDown(this.downKey)) {
-            this.currentTrackIndex = Phaser.Math.Wrap(this.currentTrackIndex + 1, 0, this.tracks.length);
-            this.y = this.tracks[this.currentTrackIndex].y;
+        if (this.enableMovement) {
+            if (Phaser.Input.Keyboard.JustDown(this.upKey)) {
+                this.currentTrackIndex = Phaser.Math.Wrap(this.currentTrackIndex - 1, 0, this.tracks.length);
+                this.y = this.tracks[this.currentTrackIndex].y;
+            } else if (Phaser.Input.Keyboard.JustDown(this.downKey)) {
+                this.currentTrackIndex = Phaser.Math.Wrap(this.currentTrackIndex + 1, 0, this.tracks.length);
+                this.y = this.tracks[this.currentTrackIndex].y;
+            }
         }
 
-        // Disparar
-        if (Phaser.Input.Keyboard.JustDown(this.shootKey)) {
+        if (this.enableShooting && Phaser.Input.Keyboard.JustDown(this.shootKey)) {
             let proj = this.projectiles.get();
             if (proj) {
-                proj.fire(this.x + this.width/2, this.y, 300);  // velocidad a derecha
+                const startX = this.x - this.width / 2;
+                proj.fire(startX, this.y, -300);
                 this.shootSound.play();
             }
         }
