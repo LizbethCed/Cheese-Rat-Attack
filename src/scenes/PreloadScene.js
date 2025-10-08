@@ -18,15 +18,17 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("mouse", "assets/images/raton.png");
     this.load.image("btnBlue", "assets/images/button_rectangle_depth_border.svg");
     this.load.image("projectile", "assets/images/bala.png");
+    this.load.image("enemy", "assets/sprites/enemy.png");
 
     // Sprites
     this.load.spritesheet("player", "assets/sprites/player.png", {
       frameWidth: 32,
       frameHeight: 48
     });
+    
     this.load.spritesheet("enemy", "assets/sprites/enemy.png", {
-      frameWidth: 32,
-      frameHeight: 48
+        frameWidth: 64,
+        frameHeight: 64
     });
 
     // Audio
