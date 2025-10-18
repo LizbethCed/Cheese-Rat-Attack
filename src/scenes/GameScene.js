@@ -12,9 +12,16 @@ export default class GameScene extends Phaser.Scene {
     // Fondo
     this.add.image(0, 0, "background").setOrigin(0);
 
+ // Verificar si la textura existe
+    console.log("¿Existe la textura 'enemy'?", this.textures.exists('enemy'));
+
+    // Ver detalles de la textura
+    console.log("Detalles de la textura 'enemy':", this.textures.get('enemy'));
+
+
     // Definir rutas
     const trackYs = [140, 290, 450, 650];
-    this.tracks = trackYs.map(y => new Track(y));
+    this.tracks = trackYs.map((y, id) => new Track(y, id));
 
     const cheeseX = this.scale.width - 80;
     this.cheeseTargets = this.tracks.map(track =>
@@ -56,26 +63,38 @@ export default class GameScene extends Phaser.Scene {
     );
 
     // Colisiones: proyectil de enemigo vs jugador
-    // (nota: si agregas enemigos después, asegúrate de actualizar este overlap)
+   this.enemyProjectiles = this.physics.add.group({
+      runChildUpdate: true
+    });
+
     this.physics.add.overlap(
-      this.enemies.getChildren().flatMap(e => e.projectiles.getChildren()),
+      this.enemyProjectiles,
       this.player,
-      (proj) => {
-        proj.setActive(false).setVisible(false);
-        this.gameOver();
-      }
+      this.playerHit,
+      null,
+      this
     );
 
     // Crear enemigos periódicamente
     this.time.addEvent({
       delay: 2000,
       callback: () => {
-        const track = Phaser.Utils.Array.GetRandom(this.tracks);
-        const enemy = this.enemies.get();
-        if (enemy) enemy.start(track);
-      },
+      const track = Phaser.Utils.Array.GetRandom(this.tracks);
+      const enemy = this.enemies.get();
+      if (enemy) {
+        enemy.start(track, this.enemyProjectiles); // ← Agregar segundo parámetro
+
+        // 🐛 DEBUG: Verificar que el enemigo se creó correctamente
+        console.log("✅ Enemigo spawneado:", {
+          posición: { x: enemy.x, y: enemy.y },
+          carril: track.id,
+          tieneGrupoProyectiles: !!enemy.enemyProjectilesGroup
+        });
+      }
+    },
       loop: true
     });
+
 
     // Puntaje
     this.score = 0;
@@ -84,7 +103,13 @@ export default class GameScene extends Phaser.Scene {
       fill: "#ffffff"
     });
 
+    this.debugText = this.add.text(10, 50, "", {
+      fontSize: "16px",
+      fill: "#00ff00",
+      backgroundColor: "#000000"
+    });
     // ⛔️ Eliminado: botones de subir/bajar
+    
 
     // ESC para menú
     this.input.keyboard.once("keydown-ESC", () => {
@@ -93,6 +118,28 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+
+  if (this.gameIsOver) return;
+
+    this.mouseSprite.y = this.player.y;
+
+    if (this.score > this.bestScore) {
+      this.bestScore = this.score;
+      this.bestScoreText.setText("Mejor: " + this.bestScore);
+    }
+
+    // 🐛 DEBUG: Mostrar información en pantalla
+    const activeEnemies = this.enemies.getChildren().filter(e => e.active).length;
+    const activeEnemyProj = this.enemyProjectiles.getChildren().filter(p => p.active).length;
+    const activePlayerProj = this.player.projectiles.getChildren().filter(p => p.active).length;
+    
+    this.debugText.setText([
+      `Enemigos activos: ${activeEnemies}`,
+      `Proyectiles enemigos: ${activeEnemyProj}`,
+      `Proyectiles jugador: ${activePlayerProj}`,
+      `FPS: ${Math.round(this.game.loop.actualFps)}`
+    ]);
+
     const speed = 300 * (delta / 1000);
 
     // Movimiento con flechas
@@ -119,12 +166,14 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.scoreText.setText("Score: " + this.score);
+
   }
 
   // ⛔️ Eliminados:
   // createControlButtons() { ... }
   // snapMouseToY(...) { ... }
 
+  
   gameOver() {
     this.scene.start("GameOverScene", { score: this.score });
   }
