@@ -79,12 +79,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     releaseSnowball() {
-        this.currentTrack.throwPlayerSnowball(this.x);
+  this.currentTrack.throwPlayerSnowball(this.x);
+  this.scene.time.delayedCall(150, () => this.throwComplete());
+}
 
-        this.scene.time.delayedCall(150, () => {
-            this.throwComplete();
-        });
-    }
+
 
     throwComplete() {
         this.isThrowing = false;
