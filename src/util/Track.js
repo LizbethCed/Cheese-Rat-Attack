@@ -3,152 +3,166 @@ import PlayerShoot from '../entities/PlayerShoot.js';
 import EnemyShoot from '../entities/EnemyShoot.js';
 
 export default class Track {
-    constructor(scene, id, trackY) {
-        this.scene = scene;
-        this.id = id;
-        this.y = trackY;
+  constructor(scene, id, trackY) {
+    this.scene = scene;
+    this.id = id;
+    this.y = trackY;
 
-        // Nido en la derecha (donde está el jugador)
-        this.nest = scene.physics.add.image(1024, trackY - 10, 'nest')
-        .setOrigin(1, 1)
-        .setScale(0.4);
+    // Nido del lado derecho (jugador)
+    this.nest = scene.physics.add
+      .image(1024, trackY - 10, 'nest')
+      .setOrigin(1, 1)
+      .setScale(0.4);
 
-        // CORREGIDO: Crear ENEMIGOS (no players)
-        this.snowmanBig = new Enemy(scene, this, 'Big');
-        this.snowmanSmall = new Enemy(scene, this, 'Small');
+    // Enemigos de esta pista
+    this.snowmanBig = new Enemy(scene, this, 'Big');
+    this.snowmanSmall = new Enemy(scene, this, 'Small');
 
-        // Grupos de proyectiles del JUGADOR (van hacia izquierda)
-        this.playerSnowballs = scene.physics.add.group({
-            frameQuantity: 8,
-            key: 'snowball2',
-            active: false,
-            visible: false,
-            classType: PlayerShoot
-        });
+    // Grupos de proyectiles
+    this.playerSnowballs = scene.physics.add.group({
+      classType: PlayerShoot,
+      maxSize: 12,
+      runChildUpdate: true,
+      allowGravity: false
+    });
 
-        // Grupos de proyectiles de ENEMIGOS (van hacia derecha)
-        this.enemySnowballs = scene.physics.add.group({
-            frameQuantity: 8,
-            key: 'snowball3',
-            active: false,
-            visible: false,
-            classType: EnemyShoot
-        });
+    this.enemySnowballs = scene.physics.add.group({
+      classType: EnemyShoot,
+      maxSize: 12,
+      runChildUpdate: true,
+      allowGravity: false
+    });
 
-        // Colisión entre proyectiles (se destruyen mutuamente)
-        this.snowBallCollider = scene.physics.add.overlap(
-            this.playerSnowballs, 
-            this.enemySnowballs, 
-            this.hitSnowball, 
-            null, 
-            this
-        );
+    // 💥 Colisión proyectil del jugador ↔ proyectil enemigo
+    scene.physics.add.overlap(
+      this.playerSnowballs,
+      this.enemySnowballs,
+      this.hitSnowball,
+      null,
+      this
+    );
 
-        // Colisión proyectiles del jugador con enemigos
-        this.snowmanSmallCollider = scene.physics.add.overlap(
-            this.snowmanSmall, 
-            this.playerSnowballs, 
-            this.hitSnowman, 
-            null, 
-            this
-        );
+    // 💥 Colisión proyectil del jugador → enemigo
+    scene.physics.add.overlap(
+      this.playerSnowballs,
+      this.snowmanSmall,
+      this.hitSnowman,
+      null,
+      this
+    );
 
-        this.snowmanBigCollider = scene.physics.add.overlap(
-            this.snowmanBig, 
-            this.playerSnowballs, 
-            this.hitSnowman, 
-            null, 
-            this
-        );
+    scene.physics.add.overlap(
+      this.playerSnowballs,
+      this.snowmanBig,
+      this.hitSnowman,
+      null,
+      this
+    );
 
-        // Asegurar que los cuerpos de enemigos estén habilitados
-        this.snowmanSmall.body.enable = true;
-        this.snowmanBig.body.enable = true;
+    this.releaseTimerSmall = null;
+    this.releaseTimerBig = null;
+  }
 
+  start(minDelay, maxDelay) {
+    const delay = Phaser.Math.Between(minDelay, maxDelay);
+    this.releaseTimerSmall = this.scene.time.addEvent({
+      delay,
+      callback: () => this.snowmanSmall.start()
+    });
 
-        // Timers para spawn de enemigos
-        this.releaseTimerSmall = null;
-        this.releaseTimerBig = null;
+    this.releaseTimerBig = this.scene.time.addEvent({
+      delay: delay * 3,
+      callback: () => this.snowmanBig.start()
+    });
+  }
+
+  stop() {
+    this.snowmanSmall.stop();
+    this.snowmanBig.stop();
+
+    this.playerSnowballs.children.iterate((b) => b?.stop && b.stop());
+    this.enemySnowballs.children.iterate((b) => b?.stop && b.stop());
+
+    if (this.releaseTimerSmall) this.releaseTimerSmall.remove();
+    if (this.releaseTimerBig) this.releaseTimerBig.remove();
+  }
+
+  // =========================
+  // Colisiones
+  // =========================
+  hitSnowball(ball1, ball2) {
+    if (!ball1?.active || !ball2?.active) return;
+    ball1.stop();
+    ball2.stop();
+  }
+
+  hitSnowman(projectile, enemy) {
+    if (!enemy?.isAlive || !projectile?.active) return;
+
+    projectile.stop();
+    enemy.hit();
+
+    const particles = this.scene.add.particles('snow');
+    particles.createEmitter({
+      x: enemy.x,
+      y: enemy.y - 30,
+      speed: { min: -150, max: 150 },
+      scale: { start: 0.6, end: 0 },
+      lifespan: 400,
+      quantity: 8
+    });
+    this.scene.time.delayedCall(300, () => particles.destroy());
+  }
+
+  // =========================
+  // Disparos
+  // =========================
+  throwPlayerSnowball(x) {
+    let snowball = this.playerSnowballs.getFirstDead();
+    if (!snowball) {
+      snowball = new PlayerShoot(this.scene, x, this.y, 'projectile');
+      this.playerSnowballs.add(snowball);
     }
 
-    start(minDelay, maxDelay) {
-        const delay = Phaser.Math.Between(minDelay, maxDelay);
-
-        // Timer para enemigo pequeño
-        this.releaseTimerSmall = this.scene.time.addEvent({
-            delay: delay,
-            callback: () => {
-                this.snowmanSmall.start();
-            }
-        });
-
-        // Timer para enemigo grande (más tarde)
-        this.releaseTimerBig = this.scene.time.addEvent({
-            delay: delay * 3,
-            callback: () => {
-                this.snowmanBig.start();
-            }
-        });
+    // 🔹 Asegura grupo global del Scene
+    if (!this.scene.playerProjectiles) {
+      this.scene.playerProjectiles = this.scene.physics.add.group({
+        runChildUpdate: true,
+        allowGravity: false
+      });
     }
 
-    stop() {
-        // Detener enemigos
-        this.snowmanSmall.stop();
-        this.snowmanBig.stop();
-
-        // Detener proyectiles del jugador
-        for (let snowball of this.playerSnowballs.getChildren()) {
-            snowball.stop();
-        }
-
-        // Detener proyectiles de enemigos
-        for (let snowball of this.enemySnowballs.getChildren()) {
-            snowball.stop();
-        }
-
-        // Remover timers
-        if (this.releaseTimerSmall) {
-            this.releaseTimerSmall.remove();
-        }
-        if (this.releaseTimerBig) {
-            this.releaseTimerBig.remove();
-        }
+    if (!this.scene.playerProjectiles.contains(snowball)) {
+      this.scene.playerProjectiles.add(snowball);
     }
 
-    // Colisión entre proyectiles
-    hitSnowball(ball1, ball2) {
-        ball1.stop();
-        ball2.stop();
+    // 🔹 Activar proyectil
+    snowball.body.enable = true;
+    snowball.setActive(true).setVisible(true);
+    snowball.fire(x, this.y);
+  }
+
+  throwEnemySnowball(x) {
+    let snowball = this.enemySnowballs.getFirstDead();
+    if (!snowball) {
+      snowball = new EnemyShoot(this.scene, x, this.y, 'projectile');
+      this.enemySnowballs.add(snowball);
     }
 
-    // Colisión proyectil del jugador con enemigo
-    hitSnowman(snowman, ball) {
-    if (snowman.isAlive && snowman.x > 0) {
-        ball.stop();
-
-        // Llamar al método hit del enemigo
-        snowman.hit();
-
-        // Desactivar completamente para evitar más colisiones
-        snowman.setActive(false);
-        snowman.setVisible(false);
-    }
-}
-
-
-    // JUGADOR dispara (desde x=900, va hacia izquierda)
-    throwPlayerSnowball(x) {
-        let snowball = this.playerSnowballs.getFirstDead(true);
-        if (snowball) {
-            snowball.fire(x, this.y);
-        }
+    // 🔹 Asegura grupo global del Scene
+    if (!this.scene.enemyProjectiles) {
+      this.scene.enemyProjectiles = this.scene.physics.add.group({
+        runChildUpdate: true,
+        allowGravity: false
+      });
     }
 
-    throwEnemySnowball(x) {
-        let snowball = this.enemySnowballs.getFirstDead(true);
-        if (snowball) {
-            snowball.fire(x, this.y);
-        }
+    if (!this.scene.enemyProjectiles.contains(snowball)) {
+      this.scene.enemyProjectiles.add(snowball);
     }
 
+    snowball.body.enable = true;
+    snowball.setActive(true).setVisible(true);
+    snowball.fire(x, this.y);
+  }
 }
