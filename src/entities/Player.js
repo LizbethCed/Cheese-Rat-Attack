@@ -1,52 +1,113 @@
-import Projectile from "./Projectile.js";
-
+// Este es el DEFENSOR que controla el jugador
 export default class Player extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, tracks) {
-        super(scene, 100, tracks[0].y, "player");
+    constructor(scene, track) {
+        // Posición fija en x=900 (derecha)
+        super(scene, 900, track.y, 'mouse'); // Usar sprite del ratón/defensor
+
+        this.setOrigin(0.5, 1);
+
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        this.tracks = tracks;      // arreglo de objetos Track
-        this.currentTrackIndex = 0;
+        // ⭐ AJUSTAR TAMAÑO DEL JUGADOR si es necesario
+        this.setScale(0.8); // 40% del tamaño original - ajusta según necesites
+        
+        // Ajustar hitbox proporcionalmente
+        this.body.setSize(40, 60);
+        this.body.setOffset(10, 5);
 
-        this.projectiles = scene.physics.add.group({
-            classType: Projectile,
-            runChildUpdate: true
+        this.isAlive = true;
+        this.isThrowing = false;
+
+        this.scene = scene;
+        this.sound = scene.sound;
+        this.currentTrack = track;
+
+        // Teclas de control
+        this.spacebar = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.up = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+        this.down = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
+    }
+
+    start() {
+        this.isAlive = true;
+        this.isThrowing = false;
+        
+        this.currentTrack = this.scene.tracks[0];
+        this.y = this.currentTrack.y;
+    }
+
+    moveUp() {
+        if (this.currentTrack.id === 0) {
+            this.currentTrack = this.scene.tracks[3];
+        } else {
+            this.currentTrack = this.scene.tracks[this.currentTrack.id - 1];
+        }
+        
+        this.y = this.currentTrack.y;
+        
+        if (this.sound.get('move')) {
+            this.sound.play('move');
+        }
+    }
+
+    moveDown() {
+        if (this.currentTrack.id === 3) {
+            this.currentTrack = this.scene.tracks[0];
+        } else {
+            this.currentTrack = this.scene.tracks[this.currentTrack.id + 1];
+        }
+        
+        this.y = this.currentTrack.y;
+        
+        if (this.sound.get('move')) {
+            this.sound.play('move');
+        }
+    }
+
+    throw() {
+        if (this.isThrowing) return;
+        
+        this.isThrowing = true;
+        
+       // Reproduce el sonido de disparo de forma directa
+        this.scene.sound.play('shoot');
+
+        this.scene.time.delayedCall(200, () => {
+            this.releaseSnowball();
         });
+    }
 
-        this.shootSound = scene.sound.add("shoot");
+    releaseSnowball() {
+        this.currentTrack.throwPlayerSnowball(this.x);
 
-        // Teclas
-        this.upKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
-        this.downKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
-        this.shootKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.scene.time.delayedCall(150, () => {
+            this.throwComplete();
+        });
+    }
 
-        this.enableMovement = true;
-        this.enableShooting = true;
+    throwComplete() {
+        this.isThrowing = false;
+    }
 
-        this.setFlipX(true);
+    stop() {
+        this.isAlive = false;
+        this.body.stop();
     }
 
     preUpdate(time, delta) {
         super.preUpdate(time, delta);
 
-        if (this.enableMovement) {
-            if (Phaser.Input.Keyboard.JustDown(this.upKey)) {
-                this.currentTrackIndex = Phaser.Math.Wrap(this.currentTrackIndex - 1, 0, this.tracks.length);
-                this.y = this.tracks[this.currentTrackIndex].y;
-            } else if (Phaser.Input.Keyboard.JustDown(this.downKey)) {
-                this.currentTrackIndex = Phaser.Math.Wrap(this.currentTrackIndex + 1, 0, this.tracks.length);
-                this.y = this.tracks[this.currentTrackIndex].y;
-            }
+        if (!this.isAlive) {
+            return;
         }
 
-        if (this.enableShooting && Phaser.Input.Keyboard.JustDown(this.shootKey)) {
-            let proj = this.projectiles.get();
-            if (proj) {
-                const startX = this.x - this.width / 2;
-                proj.fire(startX, this.y, -300);
-                this.shootSound.play();
-            }
+        if (Phaser.Input.Keyboard.JustDown(this.up)) {
+            this.moveUp();
+        } else if (Phaser.Input.Keyboard.JustDown(this.down)) {
+            this.moveDown();
+        } else if (Phaser.Input.Keyboard.JustDown(this.spacebar) && !this.isThrowing) {
+            this.throw();
         }
     }
 }
