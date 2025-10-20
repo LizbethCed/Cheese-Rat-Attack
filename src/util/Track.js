@@ -56,10 +56,8 @@ export default class Track {
   throwPlayerSnowball(x) {
     console.log('🔫 Disparando proyectil del jugador en track', this.id);
     
-    // Crear nuevo proyectil
-    const snowball = new PlayerShoot(this.scene, x, this.y, 'projectile');
-    this.scene.add.existing(snowball);
-    this.scene.physics.add.existing(snowball);
+    // Crear nuevo proyectil (sin posición inicial para evitar conflictos)
+    const snowball = new PlayerShoot(this.scene, 0, 0, 'projectile');
     
     // ✅ Añadir al grupo GLOBAL
     this.scene.allPlayerProjectiles.add(snowball);

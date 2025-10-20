@@ -5,7 +5,7 @@
 
 export default class PlayerShoot extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, key = "projectile", frame) {
-    super(scene, x, y, key, frame);
+    super(scene, x, y, key, frame); // Se crea en la posición del carril (ej: 196)
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -16,7 +16,9 @@ export default class PlayerShoot extends Phaser.Physics.Arcade.Sprite {
     this.setVisible(false);
 
     // Ajusta el tamaño de la hitbox (puedes modificar según tu sprite)
-    this.body.setSize(20, 20);
+    this.body.setSize(80, 80);
+    this.body.setOffset(0, 0);
+
 
     // Activar debug visual (opcional)
     // scene.physics.world.createDebugGraphic();
@@ -27,7 +29,7 @@ export default class PlayerShoot extends Phaser.Physics.Arcade.Sprite {
     this.setVisible(true);
     this.body.enable = true;
 
-    // ✅ Posición inicial: ligeramente a la izquierda del jugador
+    // ✅ Posición inicial: A la izquierda del jugador, pero en la MISMA ALTURA Y del carril.
     this.body.reset(x - 10, y - 40);
 
     // ✅ Movimiento hacia la izquierda

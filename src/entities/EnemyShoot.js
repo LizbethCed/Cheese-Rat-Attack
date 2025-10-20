@@ -3,10 +3,17 @@
 // Van hacia la DERECHA (hacia el jugador)
 // ============================================
 
-export class EnemyShoot extends Phaser.Physics.Arcade.Sprite {
+export default class EnemyShoot extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, key, frame) {
-        super(scene, x, y, key, frame);
+        super(scene, x, y, key, frame); // Llama al constructor de la clase padre
+
+        // ✅ Añadir el objeto a la escena y al sistema de físicas
+        scene.add.existing(this);
+        scene.physics.add.existing(this);
+
+        // Configuraciones iniciales
         this.setScale(0.5);
+        this.body.setAllowGravity(false);
     }
 
     fire(x, y) {
@@ -14,9 +21,8 @@ export class EnemyShoot extends Phaser.Physics.Arcade.Sprite {
         
         this.setActive(true);
         this.setVisible(true);
-        this.body.updateFromGameObject();
 
-        // Posición inicial desde el ENEMIGO (un poco a la derecha)
+        // Posición inicial desde el ENEMIGO: A la derecha, pero en la MISMA ALTURA Y del carril.
         this.body.reset(x + 40, y - 44);
 
         this.setActive(true);
@@ -38,15 +44,9 @@ export class EnemyShoot extends Phaser.Physics.Arcade.Sprite {
     preUpdate(time, delta) {
         super.preUpdate(time, delta);
 
-        // Si llega al jugador (lado derecho), activar Game Over
-        if (this.x >= 950) {
+        // Si el proyectil sale de la pantalla por la derecha, se desactiva
+        if (this.x > this.scene.scale.width + 50) {
             this.stop();
-            
-            if (this.scene && this.scene.gameOver && this.scene.isGameRunning) {
-                this.scene.gameOver();
-            }
         }
     }
 }
-
-export default EnemyShoot;

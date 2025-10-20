@@ -90,7 +90,7 @@ export default class GameScene extends Phaser.Scene {
       this.allPlayerProjectiles,
       this.allEnemies,
       this.hitEnemy,
-      null,
+      this.checkCollision, // <--- AÑADIMOS UN PROCESO DE VERIFICACIÓN
       this
     );
 
@@ -104,6 +104,26 @@ export default class GameScene extends Phaser.Scene {
     );
 
     console.log('✅ Colisiones configuradas');
+
+    // ✅ AÑADIR DEBUG VISUAL DE FÍSICAS
+    /* this.physics.world.createDebugGraphic();
+  this.physics.world.defaults.debugShowBody = true;
+  this.physics.world.defaults.debugShowVelocity = false; */
+
+
+    // Función de verificación para el overlap
+    this.checkCollision = (projectile, enemy) => {
+      console.log('🔎 Verificando colisión...', {
+        projActive: projectile.active,
+        projBody: projectile.body.enable,
+        enemyActive: enemy.active,
+        enemyAlive: enemy.isAlive,
+        enemyBody: enemy.body.enable,
+      });
+
+      // La colisión solo debe ocurrir si ambos están "vivos" y activos
+      return projectile.active && enemy.active && enemy.isAlive;
+    };
 
     // Esperar tecla para iniciar
     this.input.keyboard.once('keydown-SPACE', this.start, this);
@@ -187,11 +207,8 @@ export default class GameScene extends Phaser.Scene {
 
     console.log('✅ ELIMINANDO ENEMIGO');
 
-    // Detener proyectil
-    if (projectile.stop) projectile.stop();
-    projectile.setActive(false).setVisible(false);
-
-    // Eliminar enemigo
+    // Destruir el proyectil y golpear al enemigo
+    projectile.destroy();
     enemy.hit();
 
     // Efecto visual
@@ -211,11 +228,8 @@ export default class GameScene extends Phaser.Scene {
     
     if (!playerProj?.active || !enemyProj?.active) return;
     
-    if (playerProj.stop) playerProj.stop();
-    if (enemyProj.stop) enemyProj.stop();
-    
-    playerProj.setActive(false).setVisible(false);
-    enemyProj.setActive(false).setVisible(false);
+    playerProj.destroy();
+    enemyProj.destroy();
   }
 
   gameOver() {
