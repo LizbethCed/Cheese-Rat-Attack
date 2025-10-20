@@ -40,6 +40,8 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   start() {
+    console.log(`🐱 Enemigo ${this.size} INICIANDO en track ${this.currentTrack.id}`);
+    
     this.isAlive = true;
     this.isThrowing = false;
     this.previousAction = 0;
@@ -51,7 +53,26 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.setActive(true);
     this.setVisible(true);
-    this.body.enable = true;
+    
+    // ✅ CRÍTICO: Asegurar que el body está habilitado
+    if (this.body) {
+      this.body.enable = true;
+      this.body.setAllowGravity(false);
+      
+      // Debug visual temporal
+      this.body.debugShowBody = true;
+      this.body.debugBodyColor = 0xff0000;
+      
+      console.log(`✅ Enemigo ${this.size} body habilitado`, {
+        x: this.x,
+        y: this.y,
+        bodyEnabled: this.body.enable,
+        active: this.active,
+        visible: this.visible
+      });
+    } else {
+      console.error(`❌ ERROR: Enemigo ${this.size} no tiene body`);
+    }
 
     // Velocidad hacia la DERECHA (positiva)
     this.setVelocityX(this.speed);
@@ -150,55 +171,71 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     );
   }
 
-  // 💥 NUEVA VERSIÓN DEL MÉTODO HIT
+  // ✅ MÉTODO HIT CON ANIMACIÓN DE SPRITESHEET
   hit() {
-  if (this.chooseEvent) this.chooseEvent.remove();
-  if (!this.isAlive) return;
+    if (this.chooseEvent) this.chooseEvent.remove();
+    if (!this.isAlive) return;
 
-  this.isAlive = false;
-  this.previousAction = -1;
+    this.isAlive = false;
+    this.previousAction = -1;
 
-  // reproducir sonido
-  if (this.sound.get('hit')) this.sound.play('hit');
-  if (this.sound.get('pop')) this.sound.play('pop');
+    // reproducir sonido
+    if (this.sound.get('hit')) this.sound.play('hit');
+    if (this.sound.get('pop')) this.sound.play('pop');
 
-  // detener física
-  this.body.stop();
-  this.body.enable = false;
+    // detener física
+    this.body.stop();
+    this.body.enable = false;
 
-  // ❄️ Partículas de explosión
-  const particles = this.scene.add.particles('snow');
-  particles.createEmitter({
-    x: this.x,
-    y: this.y - 30,
-    speed: { min: -200, max: 200 },
-    scale: { start: 0.6, end: 0 },
-    lifespan: 600,
-    quantity: 12
-  });
-
-  // animación de “muerte”
-  this.scene.tweens.add({
-    targets: this,
-    y: this.y - 40,
-    alpha: 0,
-    duration: 500,
-    ease: 'Power1',
-    onComplete: () => {
-      this.setActive(false);
-      this.setVisible(false);
-      this.alpha = 1; // reset
-      particles.destroy();
+    // ❄️ OPCIÓN 1: Usar el spritesheet animado (más espectacular)
+    if (this.scene.anims.exists('snow_explode')) {
+      const explosion = this.scene.add.sprite(this.x, this.y - 30, 'snow_explosion');
+      explosion.setScale(0.5); // Ajusta el tamaño
+      explosion.play('snow_explode');
+      
+      explosion.on('animationcomplete', () => {
+        explosion.destroy();
+      });
+    } else {
+      // ❄️ OPCIÓN 2: Fallback con partículas tradicionales
+      const particles = this.scene.add.particles('snow_particle');
+      const emitter = particles.createEmitter({
+        x: this.x,
+        y: this.y - 30,
+        speed: { min: -200, max: 200 },
+        scale: { start: 0.6, end: 0 },
+        lifespan: 600,
+        quantity: 12
+      });
+      
+      this.scene.time.delayedCall(600, () => {
+        emitter.stop();
+        particles.destroy();
+      });
     }
-  });
 
-  // sumar puntos
-  if (typeof this.scene.score !== 'undefined') {
-    this.scene.score += this.size === 'Small' ? 5 : 10;
-    if (this.scene.scoreText) this.scene.scoreText.setText(this.scene.score);
+    // animación de "muerte" del enemigo
+    this.scene.tweens.add({
+      targets: this,
+      y: this.y - 40,
+      alpha: 0,
+      duration: 500,
+      ease: 'Power1',
+      onComplete: () => {
+        this.setActive(false);
+        this.setVisible(false);
+        this.alpha = 1; // reset
+      }
+    });
+
+    // sumar puntos
+    if (typeof this.scene.score !== 'undefined') {
+      this.scene.score += this.size === 'Small' ? 5 : 10;
+      if (this.scene.scoreText) {
+        this.scene.scoreText.setText(this.scene.score);
+      }
+    }
   }
-}
-
 
   stop() {
     if (this.chooseEvent) {
