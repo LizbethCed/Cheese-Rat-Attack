@@ -24,7 +24,7 @@ export default class PreloadScene extends Phaser.Scene {
     // =========================
     // PERSONAJES / ENEMIGOS
     // =========================
-    this.load.image("mouse",                 "assets/images/raton.png");
+    this.load.image("mouse",                 "assets/sprites/player.png");
     this.load.image("snowman-small-idle0",   "assets/sprites/small_cat.png");
     this.load.image("snowman-big-throw",     "assets/sprites/big_cat.png");
 

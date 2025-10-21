@@ -31,14 +31,14 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.scene.time.delayedCall(0, () => {
       if (this.body) {
         if (size === "Small") {
-          this.setScale(0.5);
+          this.setScale(0.15);
           // ✅ Hitbox centrada: usar dimensiones del sprite escalado
-          this.body.setSize(160, 200);
+          this.body.setSize(900, 900);
           this.body.setOffset(0, 10);
         } else {
-          this.setScale(0.2);
+          this.setScale(0.18);
           // ✅ Para enemigos grandes (0.2 escala = muy pequeños)
-          this.body.setSize(280, 380);
+          this.body.setSize(980, 980);
           this.body.setOffset(90, 10);
         }
       }
