@@ -10,10 +10,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(this);
 
         // ⭐ AJUSTAR TAMAÑO DEL JUGADOR
-        this.setScale(0.8);
+        this.setScale(0.15);
         
         // Ajustar hitbox proporcionalmente
-        this.body.setSize(100, 150);
+        this.body.setSize(500, 150);
         this.body.setOffset(10, 5);
 
         this.isAlive = true;
