@@ -17,11 +17,6 @@ export default class GameScene extends Phaser.Scene {
     this.scoreTimer = null;
     this.scoreText = null;
     this.highscoreText = null;
-
-    // grupos físicos
-    this.enemies = null;
-    this.playerProjectiles = null;
-    this.enemyProjectiles = null;
   }
 
   create() {
@@ -32,18 +27,37 @@ export default class GameScene extends Phaser.Scene {
     // Fondo
     this.add.image(512, 384, 'background');
 
-    // Crear las 4 pistas
+    // ✅ CREAR GRUPOS GLOBALES PRIMERO (antes de los tracks)
+    console.log('🔧 Creando grupos globales...');
+    
+    this.allEnemies = this.physics.add.group({
+      runChildUpdate: true,
+      allowGravity: false
+    });
+
+    this.allPlayerProjectiles = this.physics.add.group({
+      runChildUpdate: true,
+      allowGravity: false
+    });
+
+    this.allEnemyProjectiles = this.physics.add.group({
+      runChildUpdate: true,
+      allowGravity: false
+    });
+
+    console.log('✅ Grupos creados:', {
+      enemies: this.allEnemies,
+      playerProj: this.allPlayerProjectiles,
+      enemyProj: this.allEnemyProjectiles
+    });
+
+    // Crear las 4 pistas (ahora sí pueden usar los grupos)
     this.tracks = [
       new Track(this, 0, 196),
       new Track(this, 1, 376),
       new Track(this, 2, 536),
       new Track(this, 3, 700)
     ];
-
-    // Crear los grupos físicos
-    this.enemies = this.physics.add.group();
-    this.playerProjectiles = this.physics.add.group();
-    this.enemyProjectiles = this.physics.add.group();
 
     // Crear el PLAYER (defensor)
     this.player = new Player(this, this.tracks[0]);
@@ -63,9 +77,50 @@ export default class GameScene extends Phaser.Scene {
       color: '#ffffff'
     });
 
-    // Overlaps
-    this.physics.add.overlap(this.playerProjectiles, this.enemies, this.hitEnemy, null, this);
-    this.physics.add.overlap(this.enemyProjectiles, this.player, this.hitPlayer, null, this);
+    // ✅ COLISIONES GLOBALES - DESPUÉS de crear todo
+    console.log('🔧 Configurando colisiones globales...');
+    console.log('Total enemigos:', this.allEnemies.getLength());
+    console.log('Total proyectiles jugador:', this.allPlayerProjectiles.getLength());
+    
+    // Colisión: Proyectiles jugador → Enemigos
+    this.physics.add.overlap(
+      this.allPlayerProjectiles,
+      this.allEnemies,
+      this.hitEnemy,
+      this.checkCollision, // <--- AÑADIMOS UN PROCESO DE VERIFICACIÓN
+      this
+    );
+
+    // Colisión: Proyectiles jugador ↔ Proyectiles enemigos
+    this.physics.add.overlap(
+      this.allPlayerProjectiles,
+      this.allEnemyProjectiles,
+      this.hitProjectiles,
+      null,
+      this
+    );
+
+    console.log('✅ Colisiones configuradas');
+
+    // ✅ AÑADIR DEBUG VISUAL DE FÍSICAS
+    /* this.physics.world.createDebugGraphic();
+  this.physics.world.defaults.debugShowBody = true;
+  this.physics.world.defaults.debugShowVelocity = false; */
+
+
+    // Función de verificación para el overlap
+    this.checkCollision = (projectile, enemy) => {
+      console.log('🔎 Verificando colisión...', {
+        projActive: projectile.active,
+        projBody: projectile.body.enable,
+        enemyActive: enemy.active,
+        enemyAlive: enemy.isAlive,
+        enemyBody: enemy.body.enable,
+      });
+
+      // La colisión solo debe ocurrir si ambos están "vivos" y activos
+      return projectile.active && enemy.active && enemy.isAlive;
+    };
 
     // Esperar tecla para iniciar
     this.input.keyboard.once('keydown-SPACE', this.start, this);
@@ -113,36 +168,50 @@ export default class GameScene extends Phaser.Scene {
 
   }
 
-  // ===========================================
-  //  FUNCIONES NUEVAS  🧨
-  // ===========================================
+  // 🔍 DEBUG: Verificar colisiones manualmente
+  update() {
+    // Contar entidades activas
+    const activeProjectiles = this.allPlayerProjectiles.getChildren().filter(p => p.active);
+    const activeEnemies = this.allEnemies.getChildren().filter(e => e.active && e.isAlive);
 
-  // Disparo del jugador (ratón)
-  throwPlayerSnowball(x, y) {
-    const snowball = new PlayerShoot(this, x, y, 'projectile');
-    this.add.existing(snowball);
-    this.physics.add.existing(snowball);
-    snowball.fire(x, y);
-    this.playerProjectiles.add(snowball);
+    if (activeProjectiles.length > 0 && activeEnemies.length > 0) {
+      // Hay proyectiles y enemigos activos, verificar overlap manual
+      activeProjectiles.forEach(proj => {
+        activeEnemies.forEach(enemy => {
+          const distance = Phaser.Math.Distance.Between(proj.x, proj.y, enemy.x, enemy.y);
+          if (distance < 50) { // Threshold de colisión
+            console.log('⚠️ OVERLAP MANUAL DETECTADO', {
+              projX: proj.x,
+              projY: proj.y,
+              enemyX: enemy.x,
+              enemyY: enemy.y,
+              distance: distance
+            });
+          }
+        });
+      });
+    }
   }
 
-  // Disparo del enemigo (gato)
-  throwEnemySnowball(x, y) {
-    const snowball = new EnemyShoot(this, x, y, 'projectile');
-    this.add.existing(snowball);
-    this.physics.add.existing(snowball);
-    snowball.fire(x, y);
-    this.enemyProjectiles.add(snowball);
-  }
-
-  // Cuando bala del jugador impacta enemigo
+  // ===========================================
+  // 🎯 COLISIONES GLOBALES
+  // ===========================================
   hitEnemy(projectile, enemy) {
-    if (!enemy.isAlive || !projectile.active) return;
+    console.log('💥 COLISIÓN DETECTADA: Proyectil → Enemigo', {
+      projectileX: projectile.x,
+      enemyX: enemy.x,
+      enemyAlive: enemy.isAlive
+    });
 
-    // Desactivar proyectil
-    if (projectile.stop) projectile.stop();
-    projectile.setActive(false).setVisible(false);
+    if (!enemy.isAlive || !projectile.active) {
+      console.log('❌ Colisión ignorada - condiciones no cumplidas');
+      return;
+    }
 
+    console.log('✅ ELIMINANDO ENEMIGO');
+
+    // Destruir el proyectil y golpear al enemigo
+    projectile.destroy();
 <<<<<<< Updated upstream
     // Ejecutar reacción de golpe del enemigo
 =======
@@ -156,36 +225,27 @@ export default class GameScene extends Phaser.Scene {
 >>>>>>> Stashed changes
     enemy.hit();
 
-    // Efecto visual de nieve
-    const particles = this.add.particles('snow');
-    particles.createEmitter({
-      x: enemy.x,
-      y: enemy.y - 40,
-      speed: { min: -100, max: 100 },
-      lifespan: 400,
-      quantity: 6
-    });
-    this.time.delayedCall(400, () => particles.destroy());
-
-    // Incrementar puntuación
-    this.score += 5;
-    this.scoreText.setText(this.score);
+    // Efecto visual
+    if (this.anims.exists('snow_explode')) {
+      const explosion = this.add.sprite(enemy.x, enemy.y - 30, 'snow_explosion');
+      explosion.setScale(0.4);
+      explosion.play('snow_explode');
+      
+      explosion.on('animationcomplete', () => {
+        explosion.destroy();
+      });
+    }
   }
 
-  // Cuando bala del enemigo impacta al jugador
-  hitPlayer(player, projectile) {
-    if (!player.isAlive || !projectile.active) return;
-
-    projectile.stop?.();
-    projectile.setActive(false).setVisible(false);
-
-    player.stop();
-    this.gameOver();
+  hitProjectiles(playerProj, enemyProj) {
+    console.log('💥 Colisión proyectil vs proyectil');
+    
+    if (!playerProj?.active || !enemyProj?.active) return;
+    
+    playerProj.destroy();
+    enemyProj.destroy();
   }
 
-  // ===========================================
-  //  GAME OVER
-  // ===========================================
   gameOver() {
     // Cambiar a panel de game over
     this.infoPanel.setTexture('gameover');
@@ -212,7 +272,9 @@ export default class GameScene extends Phaser.Scene {
     this.player.stop();
 
     // Detener timer de puntuación
-    this.scoreTimer.destroy();
+    if (this.scoreTimer) {
+      this.scoreTimer.destroy();
+    }
 
     // Actualizar highscore si es necesario
     if (this.score > this.previousHighscore) {

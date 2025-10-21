@@ -2,18 +2,18 @@
 export default class Player extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, track) {
         // Posición fija en x=900 (derecha)
-        super(scene, 900, track.y, 'mouse'); // Usar sprite del ratón/defensor
+        super(scene, 900, track.y, 'mouse');
 
         this.setOrigin(0.5, 1);
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        // ⭐ AJUSTAR TAMAÑO DEL JUGADOR si es necesario
-        this.setScale(0.8); // 40% del tamaño original - ajusta según necesites
+        // ⭐ AJUSTAR TAMAÑO DEL JUGADOR
+        this.setScale(0.8);
         
         // Ajustar hitbox proporcionalmente
-        this.body.setSize(40, 60);
+        this.body.setSize(100, 150);
         this.body.setOffset(10, 5);
 
         this.isAlive = true;
@@ -35,6 +35,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         
         this.currentTrack = this.scene.tracks[0];
         this.y = this.currentTrack.y;
+        
+        console.log('👤 Player iniciado en track', this.currentTrack.id);
     }
 
     moveUp() {
@@ -45,6 +47,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         }
         
         this.y = this.currentTrack.y;
+        
+        console.log('⬆️ Movido a track', this.currentTrack.id);
         
         if (this.sound.get('move')) {
             this.sound.play('move');
@@ -60,18 +64,27 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         
         this.y = this.currentTrack.y;
         
+        console.log('⬇️ Movido a track', this.currentTrack.id);
+        
         if (this.sound.get('move')) {
             this.sound.play('move');
         }
     }
 
     throw() {
-        if (this.isThrowing) return;
+        if (this.isThrowing) {
+            console.log('⏳ Ya está disparando, ignorando...');
+            return;
+        }
+        
+        console.log('🎯 DISPARO INICIADO en track', this.currentTrack.id);
         
         this.isThrowing = true;
         
-       // Reproduce el sonido de disparo de forma directa
-        this.scene.sound.play('shoot');
+        // Reproducir sonido
+        if (this.scene.sound.get('shoot')) {
+            this.scene.sound.play('shoot');
+        }
 
         this.scene.time.delayedCall(200, () => {
             this.releaseSnowball();
@@ -79,14 +92,24 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     releaseSnowball() {
-  this.currentTrack.throwPlayerSnowball(this.x);
-  this.scene.time.delayedCall(150, () => this.throwComplete());
-}
-
-
+        console.log('❄️ Liberando proyectil desde posición', {
+            playerX: this.x,
+            playerY: this.y,
+            trackId: this.currentTrack.id,
+            trackY: this.currentTrack.y
+        });
+        
+        // Disparar en el track actual
+        this.currentTrack.throwPlayerSnowball(this.x);
+        
+        this.scene.time.delayedCall(150, () => {
+            this.throwComplete();
+        });
+    }
 
     throwComplete() {
         this.isThrowing = false;
+        console.log('✅ Disparo completado, listo para siguiente');
     }
 
     stop() {

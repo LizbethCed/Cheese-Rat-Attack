@@ -14,17 +14,6 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // ⭐ ESCALAR ENEMIGOS - Ajusta estos valores según necesites
-    if (size === "Small") {
-      this.setScale(0.5); // 50% del tamaño original
-      this.body.setSize(60, 60); // Hitbox más pequeña
-      this.body.setOffset(10, 20);
-    } else {
-      this.setScale(0.2); // 20% del tamaño original
-      this.body.setSize(80, 100);
-      this.body.setOffset(30, 30);
-    }
-
     this.scene = scene;
     this.time = scene.time;
     this.sound = scene.sound;
@@ -37,21 +26,68 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     // 0 = walk, 1 = idle, 2 = throw
     this.previousAction = 0;
     this.currentTrack = track;
+
+    // ✅ Usar un callback para configurar el cuerpo de físicas de forma segura
+    this.scene.time.delayedCall(0, () => {
+      if (this.body) {
+        if (size === "Small") {
+          this.setScale(0.5);
+          // ✅ Hitbox centrada: usar dimensiones del sprite escalado
+          this.body.setSize(160, 200);
+          this.body.setOffset(0, 10);
+        } else {
+          this.setScale(0.2);
+          // ✅ Para enemigos grandes (0.2 escala = muy pequeños)
+          this.body.setSize(280, 380);
+          this.body.setOffset(90, 10);
+        }
+      }
+    });
   }
 
   start() {
+    console.log(`🐱 Enemigo ${this.size} INICIANDO en track ${this.currentTrack.id}`);
+    
     this.isAlive = true;
     this.isThrowing = false;
     this.previousAction = 0;
 
-    this.y = this.currentTrack.y;
-
-    // Resetear posición según tamaño
-    this.x = this.size === "Small" ? 80 : -100;
+    // Limpiar cualquier estado anterior
+    this.alpha = 1;
 
     this.setActive(true);
     this.setVisible(true);
-    this.body.enable = true;
+    
+    if (this.body) {
+      this.body.enable = true;
+
+      
+      const startX = this.size === "Small" ? 80 : -100;
+      this.body.reset(startX, this.currentTrack.y);
+
+      console.log(`🔄 Enemigo ${this.size} REINICIADO en ${startX}, ${this.currentTrack.y}`);
+      
+      // Forzar la reactivación en el grupo de físicas
+      if (this.scene.allEnemies) {
+        this.scene.allEnemies.world.enable(this);
+      }
+
+      this.body.setAllowGravity(false);
+      
+      // Debug visual temporal
+      this.body.debugShowBody = true;
+      this.body.debugBodyColor = 0xff0000;
+      
+      console.log(`✅ Enemigo ${this.size} body habilitado`, {
+        x: this.x,
+        y: this.y,
+        bodyEnabled: this.body.enable,
+        active: this.active,
+        visible: this.visible
+      });
+    } else {
+      console.error(`❌ ERROR: Enemigo ${this.size} no tiene body`);
+    }
 
     // Velocidad hacia la DERECHA (positiva)
     this.setVelocityX(this.speed);
@@ -150,48 +186,70 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     );
   }
 
-  // 💥 NUEVA VERSIÓN DEL MÉTODO HIT
+  // ✅ MÉTODO HIT CON ANIMACIÓN DE SPRITESHEET
   hit() {
-  if (this.chooseEvent) this.chooseEvent.remove();
-  if (!this.isAlive) return;
+    if (this.chooseEvent) this.chooseEvent.remove();
+    if (!this.isAlive) return;
 
-  this.isAlive = false;
-  this.previousAction = -1;
+    this.isAlive = false;
+    this.previousAction = -1;
 
-  // reproducir sonido
-  if (this.sound.get('hit')) this.sound.play('hit');
-  if (this.sound.get('pop')) this.sound.play('pop');
+    // reproducir sonido
+    if (this.sound.get('hit')) this.sound.play('hit');
+    if (this.sound.get('pop')) this.sound.play('pop');
 
-  // detener física
-  this.body.stop();
-  this.body.enable = false;
+    // detener física
+    this.setVelocityX(0);
+    this.body.setEnable(false); // Deshabilita el cuerpo para nuevas colisiones, pero sigue existiendo
 
-  // ❄️ Partículas de explosión
-  const particles = this.scene.add.particles('snow');
-  particles.createEmitter({
-    x: this.x,
-    y: this.y - 30,
-    speed: { min: -200, max: 200 },
-    scale: { start: 0.6, end: 0 },
-    lifespan: 600,
-    quantity: 12
-  });
-
-  // animación de “muerte”
-  this.scene.tweens.add({
-    targets: this,
-    y: this.y - 40,
-    alpha: 0,
-    duration: 500,
-    ease: 'Power1',
-    onComplete: () => {
-      this.setActive(false);
-      this.setVisible(false);
-      this.alpha = 1; // reset
-      particles.destroy();
+    // ❄️ OPCIÓN 1: Usar el spritesheet animado (más espectacular)
+    if (this.scene.anims.exists('snow_explode')) {
+      const explosion = this.scene.add.sprite(this.x, this.y - 30, 'snow_explosion');
+      explosion.setScale(0.5); // Ajusta el tamaño
+      explosion.play('snow_explode');
+      
+      explosion.on('animationcomplete', () => {
+        explosion.destroy();
+      });
+    } else {
+      // ❄️ OPCIÓN 2: Fallback con partículas tradicionales
+      const emitter = this.scene.add.particles(this.x, this.y - 30, 'particle_snow', {
+        x: this.x,
+        y: this.y - 30,
+        speed: { min: -200, max: 200 },
+        scale: { start: 0.6, end: 0 },
+        lifespan: 600,
+        quantity: 12,
+        emitting: true
+      });
+      
+      this.scene.time.delayedCall(600, () => {
+        emitter.destroy();
+      });
     }
-  });
 
+    // animación de "muerte" del enemigo
+    this.scene.tweens.add({
+      targets: this,
+      y: this.y - 40,
+      alpha: 0,
+      duration: 500,
+      ease: 'Power1',
+      onComplete: () => {
+        this.setActive(false);
+        this.setVisible(false);
+        this.alpha = 1; // reset
+      }
+    });
+
+    // sumar puntos
+    if (typeof this.scene.score !== 'undefined') {
+      this.scene.score += this.size === 'Small' ? 5 : 10;
+      if (this.scene.scoreText) {
+        this.scene.scoreText.setText(this.scene.score);
+      }
+    }
+  }
 <<<<<<< Updated upstream
   // sumar puntos
   if (typeof this.scene.score !== 'undefined') {

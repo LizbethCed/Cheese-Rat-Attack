@@ -14,50 +14,16 @@ export default class Track {
       .setOrigin(1, 1)
       .setScale(0.4);
 
-    // Enemigos de esta pista
+    // Crear los enemigos individuales
     this.snowmanBig = new Enemy(scene, this, 'Big');
     this.snowmanSmall = new Enemy(scene, this, 'Small');
-
-    // Grupos de proyectiles
-    this.playerSnowballs = scene.physics.add.group({
-      classType: PlayerShoot,
-      maxSize: 12,
-      runChildUpdate: true,
-      allowGravity: false
-    });
-
-    this.enemySnowballs = scene.physics.add.group({
-      classType: EnemyShoot,
-      maxSize: 12,
-      runChildUpdate: true,
-      allowGravity: false
-    });
-
-    // 💥 Colisión proyectil del jugador ↔ proyectil enemigo
-    scene.physics.add.overlap(
-      this.playerSnowballs,
-      this.enemySnowballs,
-      this.hitSnowball,
-      null,
-      this
-    );
-
-    // 💥 Colisión proyectil del jugador → enemigo
-    scene.physics.add.overlap(
-      this.playerSnowballs,
-      this.snowmanSmall,
-      this.hitSnowman,
-      null,
-      this
-    );
-
-    scene.physics.add.overlap(
-      this.playerSnowballs,
-      this.snowmanBig,
-      this.hitSnowman,
-      null,
-      this
-    );
+    
+    // ✅ Añadirlos al grupo GLOBAL de enemigos
+    if (scene.allEnemies) {
+      scene.allEnemies.add(this.snowmanBig);
+      scene.allEnemies.add(this.snowmanSmall);
+      console.log(`✅ Enemigos del track ${id} añadidos al grupo global`);
+    }
 
     this.releaseTimerSmall = null;
     this.releaseTimerBig = null;
@@ -80,89 +46,40 @@ export default class Track {
     this.snowmanSmall.stop();
     this.snowmanBig.stop();
 
-    this.playerSnowballs.children.iterate((b) => b?.stop && b.stop());
-    this.enemySnowballs.children.iterate((b) => b?.stop && b.stop());
-
     if (this.releaseTimerSmall) this.releaseTimerSmall.remove();
     if (this.releaseTimerBig) this.releaseTimerBig.remove();
-  }
-
-  // =========================
-  // Colisiones
-  // =========================
-  hitSnowball(ball1, ball2) {
-    if (!ball1?.active || !ball2?.active) return;
-    ball1.stop();
-    ball2.stop();
-  }
-
-  hitSnowman(projectile, enemy) {
-    if (!enemy?.isAlive || !projectile?.active) return;
-
-    projectile.stop();
-    enemy.hit();
-
-    const particles = this.scene.add.particles('snow');
-    particles.createEmitter({
-      x: enemy.x,
-      y: enemy.y - 30,
-      speed: { min: -150, max: 150 },
-      scale: { start: 0.6, end: 0 },
-      lifespan: 400,
-      quantity: 8
-    });
-    this.scene.time.delayedCall(300, () => particles.destroy());
   }
 
   // =========================
   // Disparos
   // =========================
   throwPlayerSnowball(x) {
-    let snowball = this.playerSnowballs.getFirstDead();
-    if (!snowball) {
-      snowball = new PlayerShoot(this.scene, x, this.y, 'projectile');
-      this.playerSnowballs.add(snowball);
-    }
-
-    // 🔹 Asegura grupo global del Scene
-    if (!this.scene.playerProjectiles) {
-      this.scene.playerProjectiles = this.scene.physics.add.group({
-        runChildUpdate: true,
-        allowGravity: false
-      });
-    }
-
-    if (!this.scene.playerProjectiles.contains(snowball)) {
-      this.scene.playerProjectiles.add(snowball);
-    }
-
-    // 🔹 Activar proyectil
-    snowball.body.enable = true;
-    snowball.setActive(true).setVisible(true);
+    console.log('🔫 Disparando proyectil del jugador en track', this.id);
+    
+    // Crear nuevo proyectil (sin posición inicial para evitar conflictos)
+    const snowball = new PlayerShoot(this.scene, 0, 0, 'projectile');
+    
+    // ✅ Añadir al grupo GLOBAL
+    this.scene.allPlayerProjectiles.add(snowball);
+    
+    // Activar proyectil
     snowball.fire(x, this.y);
+    
+    console.log('✅ Proyectil añadido al grupo global', {
+      x: snowball.x,
+      y: snowball.y,
+      totalProjectiles: this.scene.allPlayerProjectiles.getLength()
+    });
   }
 
   throwEnemySnowball(x) {
-    let snowball = this.enemySnowballs.getFirstDead();
-    if (!snowball) {
-      snowball = new EnemyShoot(this.scene, x, this.y, 'projectile');
-      this.enemySnowballs.add(snowball);
-    }
-
-    // 🔹 Asegura grupo global del Scene
-    if (!this.scene.enemyProjectiles) {
-      this.scene.enemyProjectiles = this.scene.physics.add.group({
-        runChildUpdate: true,
-        allowGravity: false
-      });
-    }
-
-    if (!this.scene.enemyProjectiles.contains(snowball)) {
-      this.scene.enemyProjectiles.add(snowball);
-    }
-
-    snowball.body.enable = true;
-    snowball.setActive(true).setVisible(true);
+    const snowball = new EnemyShoot(this.scene, x, this.y, 'projectile');
+    this.scene.add.existing(snowball);
+    this.scene.physics.add.existing(snowball);
+    
+    // ✅ Añadir al grupo GLOBAL
+    this.scene.allEnemyProjectiles.add(snowball);
+    
     snowball.fire(x, this.y);
   }
 }

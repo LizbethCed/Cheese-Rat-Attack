@@ -5,7 +5,7 @@
 
 export default class PlayerShoot extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, key = "projectile", frame) {
-    super(scene, x, y, key, frame);
+    super(scene, x, y, key, frame); // Se crea en la posición del carril (ej: 196)
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -15,8 +15,13 @@ export default class PlayerShoot extends Phaser.Physics.Arcade.Sprite {
     this.setActive(false);
     this.setVisible(false);
 
-    // Ajusta hitbox
-    this.body.setSize(20, 20);
+    // Ajusta el tamaño de la hitbox (puedes modificar según tu sprite)
+    this.body.setSize(80, 80);
+    this.body.setOffset(0, 0);
+
+
+    // Activar debug visual (opcional)
+    // scene.physics.world.createDebugGraphic();
   }
 
   fire(x, y) {
@@ -24,13 +29,13 @@ export default class PlayerShoot extends Phaser.Physics.Arcade.Sprite {
     this.setVisible(true);
     this.body.enable = true;
 
-    // Posición inicial un poco a la izquierda del ratón
-    this.body.reset(x - 40, y - 40);
+    // ✅ Posición inicial: A la izquierda del jugador, pero en la MISMA ALTURA Y del carril.
+    this.body.reset(x - 10, y - 40);
 
     // ✅ Movimiento hacia la izquierda
     this.setVelocityX(-600);
 
-    // Efecto giratorio (opcional pero visualmente agradable)
+    // Efecto giratorio opcional (añade dinamismo al disparo)
     this.scene.tweens.add({
       targets: this,
       angle: 360,
@@ -38,6 +43,9 @@ export default class PlayerShoot extends Phaser.Physics.Arcade.Sprite {
       repeat: -1,
       ease: "Linear",
     });
+
+    // Log para depuración
+    console.log("💥 Disparo lanzado desde:", x, y);
   }
 
   stop() {
@@ -51,9 +59,10 @@ export default class PlayerShoot extends Phaser.Physics.Arcade.Sprite {
   preUpdate(time, delta) {
     super.preUpdate(time, delta);
 
-    // Si sale de la pantalla, desactivar
+    // Si el proyectil sale de la pantalla por la izquierda, se desactiva
     if (this.x < -50) {
       this.stop();
+      console.log("🧊 Disparo eliminado (fuera de pantalla)");
     }
   }
 }

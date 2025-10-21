@@ -42,7 +42,13 @@ export default class PreloadScene extends Phaser.Scene {
     // =========================
     // PARTÍCULA PARA MUERTE
     // =========================
-    this.load.image("snow", "assets/images/particle_snow.png");
+    this.load.spritesheet("snow_explosion", "assets/images/particle_snow.png", {
+      frameWidth: 128,   // Ajusta según el tamaño real de cada frame
+      frameHeight: 128   // La imagen completa es 1024x1024, dividida en 8x8
+    });
+
+    this.load.image("particle_snow", "assets/images/particle_snow.png");
+
 
     // =========================
     // AUDIO
