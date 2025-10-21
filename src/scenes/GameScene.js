@@ -63,16 +63,25 @@ export default class GameScene extends Phaser.Scene {
     this.player = new Player(this, this.tracks[0]);
     this.player.start();
 
-    // Overlay UI
-   
-
     // Panel de información inicial
     this.infoPanel = this.add.image(512, 384, 'controls');
 
-    // Texto de récord (esquina superior derecha)
-    this.highscoreText = this.add.text(820, 2, this.highscore, {
+    // Texto de puntuación (esquina superior derecha)
+    this.add.text(720, 2, 'Puntos:', {
       fontFamily: 'Arial',
-      
+      fontSize: 32,
+      color: '#ffffff'
+    });
+
+    this.scoreText = this.add.text(840, 2, this.score, {
+      fontFamily: 'Arial',
+      fontSize: 32,
+      color: '#ffffff'
+    });
+
+    // Texto de récord (debajo del contador de puntos)
+    this.highscoreText = this.add.text(720, 42, `Record: ${this.highscore}`, {
+      fontFamily: 'Arial',
       fontSize: 32,
       color: '#ffffff'
     });
@@ -138,7 +147,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.score > this.highscore) {
       this.highscore = this.score;
       if (this.highscoreText) {
-        this.highscoreText.setText(this.highscore);
+        this.highscoreText.setText(`Record: ${this.highscore}`);
       }
       this.registry.set('highscore', this.highscore);
     }
@@ -210,19 +219,12 @@ export default class GameScene extends Phaser.Scene {
 
     console.log('✅ ELIMINANDO ENEMIGO');
 
-    // Destruir el proyectil y golpear al enemigo
-    projectile.destroy();
-<<<<<<< Updated upstream
-    // Ejecutar reacción de golpe del enemigo
-=======
-    console.log('✅ ELIMINANDO ENEMIGO');
-
     const points = enemy.size === 'Small' ? 5 : 10;
     this.addScore(points);
 
     // Destruir el proyectil y golpear al enemigo
     projectile.destroy();
->>>>>>> Stashed changes
+    // Ejecutar reacción de golpe del enemigo
     enemy.hit();
 
     // Efecto visual
@@ -278,8 +280,12 @@ export default class GameScene extends Phaser.Scene {
 
     // Actualizar highscore si es necesario
     if (this.score > this.previousHighscore) {
-      this.highscoreText.setText('NEW!');
+      if (this.highscoreText) {
+        this.highscoreText.setText('Record: NEW!');
+      }
       this.registry.set('highscore', this.score);
+    } else if (this.highscoreText) {
+      this.highscoreText.setText(`Record: ${this.highscore}`);
     }
 
     // Esperar tecla o click para volver al menú

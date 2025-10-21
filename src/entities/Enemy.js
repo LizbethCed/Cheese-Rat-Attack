@@ -47,7 +47,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   start() {
     console.log(`🐱 Enemigo ${this.size} INICIANDO en track ${this.currentTrack.id}`);
-    
+
     this.isAlive = true;
     this.isThrowing = false;
     this.previousAction = 0;
@@ -57,27 +57,27 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.setActive(true);
     this.setVisible(true);
-    
+
     if (this.body) {
       this.body.enable = true;
 
-      
+
       const startX = this.size === "Small" ? 80 : -100;
       this.body.reset(startX, this.currentTrack.y);
 
       console.log(`🔄 Enemigo ${this.size} REINICIADO en ${startX}, ${this.currentTrack.y}`);
-      
+
       // Forzar la reactivación en el grupo de físicas
       if (this.scene.allEnemies) {
         this.scene.allEnemies.world.enable(this);
       }
 
       this.body.setAllowGravity(false);
-      
+
       // Debug visual temporal
       this.body.debugShowBody = true;
       this.body.debugBodyColor = 0xff0000;
-      
+
       console.log(`✅ Enemigo ${this.size} body habilitado`, {
         x: this.x,
         y: this.y,
@@ -207,7 +207,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
       const explosion = this.scene.add.sprite(this.x, this.y - 30, 'snow_explosion');
       explosion.setScale(0.5); // Ajusta el tamaño
       explosion.play('snow_explode');
-      
+
       explosion.on('animationcomplete', () => {
         explosion.destroy();
       });
@@ -222,7 +222,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         quantity: 12,
         emitting: true
       });
-      
+
       this.scene.time.delayedCall(600, () => {
         emitter.destroy();
       });
@@ -242,38 +242,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
     });
 
-    // sumar puntos
-    if (typeof this.scene.score !== 'undefined') {
-      this.scene.score += this.size === 'Small' ? 5 : 10;
-      if (this.scene.scoreText) {
-        this.scene.scoreText.setText(this.scene.score);
-      }
-    }
   }
-<<<<<<< Updated upstream
-  // sumar puntos
-  if (typeof this.scene.score !== 'undefined') {
-    this.scene.score += this.size === 'Small' ? 5 : 10;
-    if (this.scene.scoreText) this.scene.scoreText.setText(this.scene.score);
-=======
-    // animación de "muerte" del enemigo
-    this.scene.tweens.add({
-      targets: this,
-      y: this.y - 40,
-      alpha: 0,
-      duration: 500,
-      ease: 'Power1',
-      onComplete: () => {
-        this.setActive(false);
-        this.setVisible(false);
-        this.alpha = 1; // reset
-      }
-    });
-
->>>>>>> Stashed changes
-  }
-}
-
 
   stop() {
     if (this.chooseEvent) {
