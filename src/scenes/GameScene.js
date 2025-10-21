@@ -12,6 +12,7 @@ export default class GameScene extends Phaser.Scene {
     this.tracks = null;
     this.score = 0;
     this.highscore = 0;
+    this.previousHighscore = 0;
     this.infoPanel = null;
     this.scoreTimer = null;
     this.scoreText = null;
@@ -21,6 +22,7 @@ export default class GameScene extends Phaser.Scene {
   create() {
     this.score = 0;
     this.highscore = this.registry.get('highscore') || 0;
+    this.previousHighscore = this.highscore;
 
     // Fondo
     this.add.image(512, 384, 'background');
@@ -61,20 +63,24 @@ export default class GameScene extends Phaser.Scene {
     this.player = new Player(this, this.tracks[0]);
     this.player.start();
 
-    // Overlay UI
-    this.add.image(0, 0, 'overlay').setOrigin(0);
-
     // Panel de información inicial
     this.infoPanel = this.add.image(512, 384, 'controls');
 
-    // Textos de puntuación
-    this.scoreText = this.add.text(140, 2, this.score, {
+    // Texto de puntuación (esquina superior derecha)
+    this.add.text(720, 2, 'Puntos:', {
       fontFamily: 'Arial',
       fontSize: 32,
       color: '#ffffff'
     });
 
-    this.highscoreText = this.add.text(820, 2, this.highscore, {
+    this.scoreText = this.add.text(840, 2, this.score, {
+      fontFamily: 'Arial',
+      fontSize: 32,
+      color: '#ffffff'
+    });
+
+    // Texto de récord (debajo del contador de puntos)
+    this.highscoreText = this.add.text(720, 42, `Record: ${this.highscore}`, {
       fontFamily: 'Arial',
       fontSize: 32,
       color: '#ffffff'
@@ -131,6 +137,22 @@ export default class GameScene extends Phaser.Scene {
     this.input.keyboard.once('keydown-DOWN', this.start, this);
   }
 
+  addScore(points = 1) {
+    this.score += points;
+
+    if (this.scoreText) {
+      this.scoreText.setText(this.score);
+    }
+
+    if (this.score > this.highscore) {
+      this.highscore = this.score;
+      if (this.highscoreText) {
+        this.highscoreText.setText(`Record: ${this.highscore}`);
+      }
+      this.registry.set('highscore', this.highscore);
+    }
+  }
+
   start() {
     // Remover listeners de inicio
     this.input.keyboard.removeAllListeners();
@@ -153,16 +175,6 @@ export default class GameScene extends Phaser.Scene {
     this.tracks[2].start(5000, 9000);
     this.tracks[3].start(6000, 10000);
 
-    // Timer de puntuación (incrementa cada segundo)
-    this.scoreTimer = this.time.addEvent({
-      delay: 1000,
-      callback: () => {
-        this.score++;
-        this.scoreText.setText(this.score);
-      },
-      callbackScope: this,
-      repeat: -1
-    });
   }
 
   // 🔍 DEBUG: Verificar colisiones manualmente
@@ -207,8 +219,12 @@ export default class GameScene extends Phaser.Scene {
 
     console.log('✅ ELIMINANDO ENEMIGO');
 
+    const points = enemy.size === 'Small' ? 5 : 10;
+    this.addScore(points);
+
     // Destruir el proyectil y golpear al enemigo
     projectile.destroy();
+    // Ejecutar reacción de golpe del enemigo
     enemy.hit();
 
     // Efecto visual
@@ -263,9 +279,13 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Actualizar highscore si es necesario
-    if (this.score > this.highscore) {
-      this.highscoreText.setText('NEW!');
+    if (this.score > this.previousHighscore) {
+      if (this.highscoreText) {
+        this.highscoreText.setText('Record: NEW!');
+      }
       this.registry.set('highscore', this.score);
+    } else if (this.highscoreText) {
+      this.highscoreText.setText(`Record: ${this.highscore}`);
     }
 
     // Esperar tecla o click para volver al menú
