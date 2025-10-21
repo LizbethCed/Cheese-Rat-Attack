@@ -192,10 +192,27 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
   });
 
+<<<<<<< Updated upstream
   // sumar puntos
   if (typeof this.scene.score !== 'undefined') {
     this.scene.score += this.size === 'Small' ? 5 : 10;
     if (this.scene.scoreText) this.scene.scoreText.setText(this.scene.score);
+=======
+    // animación de "muerte" del enemigo
+    this.scene.tweens.add({
+      targets: this,
+      y: this.y - 40,
+      alpha: 0,
+      duration: 500,
+      ease: 'Power1',
+      onComplete: () => {
+        this.setActive(false);
+        this.setVisible(false);
+        this.alpha = 1; // reset
+      }
+    });
+
+>>>>>>> Stashed changes
   }
 }
 

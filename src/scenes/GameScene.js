@@ -12,6 +12,7 @@ export default class GameScene extends Phaser.Scene {
     this.tracks = null;
     this.score = 0;
     this.highscore = 0;
+    this.previousHighscore = 0;
     this.infoPanel = null;
     this.scoreTimer = null;
     this.scoreText = null;
@@ -26,6 +27,7 @@ export default class GameScene extends Phaser.Scene {
   create() {
     this.score = 0;
     this.highscore = this.registry.get('highscore') || 0;
+    this.previousHighscore = this.highscore;
 
     // Fondo
     this.add.image(512, 384, 'background');
@@ -48,20 +50,15 @@ export default class GameScene extends Phaser.Scene {
     this.player.start();
 
     // Overlay UI
-    this.add.image(0, 0, 'overlay').setOrigin(0);
+   
 
     // Panel de información inicial
     this.infoPanel = this.add.image(512, 384, 'controls');
 
-    // Textos de puntuación
-    this.scoreText = this.add.text(140, 2, this.score, {
-      fontFamily: 'Arial',
-      fontSize: 32,
-      color: '#ffffff'
-    });
-
+    // Texto de récord (esquina superior derecha)
     this.highscoreText = this.add.text(820, 2, this.highscore, {
       fontFamily: 'Arial',
+      
       fontSize: 32,
       color: '#ffffff'
     });
@@ -74,6 +71,22 @@ export default class GameScene extends Phaser.Scene {
     this.input.keyboard.once('keydown-SPACE', this.start, this);
     this.input.keyboard.once('keydown-UP', this.start, this);
     this.input.keyboard.once('keydown-DOWN', this.start, this);
+  }
+
+  addScore(points = 1) {
+    this.score += points;
+
+    if (this.scoreText) {
+      this.scoreText.setText(this.score);
+    }
+
+    if (this.score > this.highscore) {
+      this.highscore = this.score;
+      if (this.highscoreText) {
+        this.highscoreText.setText(this.highscore);
+      }
+      this.registry.set('highscore', this.highscore);
+    }
   }
 
   start() {
@@ -98,16 +111,6 @@ export default class GameScene extends Phaser.Scene {
     this.tracks[2].start(5000, 9000);
     this.tracks[3].start(6000, 10000);
 
-    // Timer de puntuación (incrementa cada segundo)
-    this.scoreTimer = this.time.addEvent({
-      delay: 1000,
-      callback: () => {
-        this.score++;
-        this.scoreText.setText(this.score);
-      },
-      callbackScope: this,
-      repeat: -1
-    });
   }
 
   // ===========================================
@@ -140,7 +143,17 @@ export default class GameScene extends Phaser.Scene {
     if (projectile.stop) projectile.stop();
     projectile.setActive(false).setVisible(false);
 
+<<<<<<< Updated upstream
     // Ejecutar reacción de golpe del enemigo
+=======
+    console.log('✅ ELIMINANDO ENEMIGO');
+
+    const points = enemy.size === 'Small' ? 5 : 10;
+    this.addScore(points);
+
+    // Destruir el proyectil y golpear al enemigo
+    projectile.destroy();
+>>>>>>> Stashed changes
     enemy.hit();
 
     // Efecto visual de nieve
@@ -202,7 +215,7 @@ export default class GameScene extends Phaser.Scene {
     this.scoreTimer.destroy();
 
     // Actualizar highscore si es necesario
-    if (this.score > this.highscore) {
+    if (this.score > this.previousHighscore) {
       this.highscoreText.setText('NEW!');
       this.registry.set('highscore', this.score);
     }
