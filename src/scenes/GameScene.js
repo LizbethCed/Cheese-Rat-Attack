@@ -17,17 +17,26 @@ export default class GameScene extends Phaser.Scene {
     this.scoreTimer = null;
     this.scoreText = null;
     this.highscoreText = null;
+    this.level2Reached = false;
+    this.levelMessage = null;
   }
 
   create() {
     this.score = 0;
     this.highscore = this.registry.get('highscore') || 0;
     this.previousHighscore = this.highscore;
+    this.level2Reached = false;
+    this.levelMessage = null;
 
     // Fondo
-    this.add.image(512, 384, 'background');
+    this.backgroundImage = this.add.image(5, 384, 'background');
+    this.backgroundImage.setDepth(-10);
 
-    
+    // Imagen decorativa del jugador al extremo derecho
+    this.playerDisplay = this.add.image(2000, 720, 'player')
+      .setOrigin(0.5, 1)
+      .setDepth(5);
+
     this.allEnemies = this.physics.add.group({
       runChildUpdate: true,
       allowGravity: false
@@ -56,20 +65,21 @@ export default class GameScene extends Phaser.Scene {
     this.player.start();
 
     // Panel de información inicial
-    this.infoPanel = this.add.image(512, 384, 'controls');
+    this.infoPanel = this.add.image(1000, 384, 'controls');
 
     // Texto de puntuación (esquina superior derecha)
-    this.add.text(720, 2, 'Puntos:', {
+    this.add.text(1000, 2, 'Puntos:', {
       fontFamily: 'Arial',
       fontSize: 32,
       color: '#ffffff'
-    });
+    }).setDepth(10);
 
     this.scoreText = this.add.text(840, 2, this.score, {
       fontFamily: 'Arial',
       fontSize: 32,
       color: '#ffffff'
     });
+    this.scoreText.setDepth(10);
 
     // Texto de récord (debajo del contador de puntos)
     this.highscoreText = this.add.text(720, 42, `Record: ${this.highscore}`, {
@@ -77,6 +87,7 @@ export default class GameScene extends Phaser.Scene {
       fontSize: 32,
       color: '#ffffff'
     });
+    this.highscoreText.setDepth(10);
 
     
     // Colisión: Proyectiles jugador → Enemigos
@@ -147,6 +158,46 @@ export default class GameScene extends Phaser.Scene {
       }
       this.registry.set('highscore', this.highscore);
     }
+
+    if (!this.level2Reached && this.score >= 150) {
+      this.reachSecondLevel();
+    }
+  }
+
+  reachSecondLevel() {
+    this.level2Reached = true;
+
+    if (this.backgroundImage) {
+      this.backgroundImage.setTexture('esenario2');
+    }
+
+    if (this.levelMessage) {
+      this.levelMessage.destroy();
+      this.levelMessage = null;
+    }
+
+    this.levelMessage = this.add.text(512, 100, 'Segundo nivel', {
+      fontFamily: 'Arial',
+      fontSize: 48,
+      color: '#ffeb3b',
+      stroke: '#000000',
+      strokeThickness: 6
+    }).setOrigin(0.5);
+    this.levelMessage.setDepth(15);
+
+    this.tweens.add({
+      targets: this.levelMessage,
+      alpha: 0,
+      duration: 800,
+      delay: 2200,
+      ease: 'Power2',
+      onComplete: () => {
+        if (this.levelMessage) {
+          this.levelMessage.destroy();
+          this.levelMessage = null;
+        }
+      }
+    });
   }
 
   start() {
