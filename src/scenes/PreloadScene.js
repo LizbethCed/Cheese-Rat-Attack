@@ -35,9 +35,8 @@ export default class PreloadScene extends Phaser.Scene {
 
     // PROYECTILES (el juego usa 'projectile' como key principal)
     this.load.image("projectile", "assets/images/bala.png");
-    // (Opcionales/legacy si los usas en algún lado)
     this.load.image("snowball2",  "assets/images/bala.png");   // jugador
-    this.load.image("snowball3",  "assets/images/bala2.png");  // enemigo
+    this.load.image("projectileEnemy",  "assets/images/balaEnemy.png");  // enemigo
 
     // =========================
     // PARTÍCULA PARA MUERTE

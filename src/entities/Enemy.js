@@ -21,7 +21,11 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.isAlive = true;
     this.isThrowing = false;
     this.size = size;
-    this.speed = 50;
+    this.speed = 80; // Aumenta este valor para que avancen más rápido (ej: 80)
+
+    // ✅ AÑADIR SISTEMA DE VIDA
+    this.maxHealth = (this.size === 'Big') ? 2 : 1;
+    this.health = this.maxHealth;
 
     // 0 = walk, 1 = idle, 2 = throw
     this.previousAction = 0;
@@ -51,6 +55,9 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.isAlive = true;
     this.isThrowing = false;
     this.previousAction = 0;
+
+    // ✅ RESTAURAR LA VIDA AL REAPARECER
+    this.health = this.maxHealth;
 
     // Limpiar cualquier estado anterior
     this.alpha = 1;
@@ -188,60 +195,63 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   // ✅ MÉTODO HIT CON ANIMACIÓN DE SPRITESHEET
   hit() {
-    if (this.chooseEvent) this.chooseEvent.remove();
     if (!this.isAlive) return;
 
-    this.isAlive = false;
-    this.previousAction = -1;
-
-    // reproducir sonido
+    // Reducir vida y reproducir sonido de impacto
+    this.health--;
     if (this.sound.get('hit')) this.sound.play('hit');
-    if (this.sound.get('pop')) this.sound.play('pop');
 
-    // detener física
-    this.setVelocityX(0);
-    this.body.setEnable(false); // Deshabilita el cuerpo para nuevas colisiones, pero sigue existiendo
+    // Si la vida es 0 o menos, el enemigo muere.
+    if (this.health <= 0) {
+      if (this.chooseEvent) this.chooseEvent.remove();
+      this.isAlive = false;
+      this.previousAction = -1;
 
-    // ❄️ OPCIÓN 1: Usar el spritesheet animado (más espectacular)
-    if (this.scene.anims.exists('snow_explode')) {
-      const explosion = this.scene.add.sprite(this.x, this.y - 30, 'snow_explosion');
-      explosion.setScale(0.5); // Ajusta el tamaño
-      explosion.play('snow_explode');
+      // Sonido de muerte
+      if (this.sound.get('pop')) this.sound.play('pop');
 
-      explosion.on('animationcomplete', () => {
-        explosion.destroy();
+      // Detener física
+      this.setVelocityX(0);
+      this.body.setEnable(false); // Deshabilita el cuerpo para nuevas colisiones
+
+      // Efecto de explosión
+      if (this.scene.anims.exists('snow_explode')) {
+        const explosion = this.scene.add.sprite(this.x, this.y - 30, 'snow_explosion');
+        explosion.setScale(0.5);
+        explosion.play('snow_explode');
+        explosion.on('animationcomplete', () => explosion.destroy());
+      }
+
+      // Animación de "muerte" del enemigo
+      this.scene.tweens.add({
+        targets: this,
+        y: this.y - 40,
+        alpha: 0,
+        duration: 500,
+        ease: 'Power1',
+        onComplete: () => {
+          this.setActive(false);
+          this.setVisible(false);
+          this.alpha = 1; // reset para reutilización
+        }
       });
     } else {
-      // ❄️ OPCIÓN 2: Fallback con partículas tradicionales
-      const emitter = this.scene.add.particles(this.x, this.y - 30, 'particle_snow', {
-        x: this.x,
-        y: this.y - 30,
-        speed: { min: -200, max: 200 },
-        scale: { start: 0.6, end: 0 },
-        lifespan: 600,
-        quantity: 12,
-        emitting: true
-      });
-
-      this.scene.time.delayedCall(600, () => {
-        emitter.destroy();
+      // Si todavía tiene vida, solo parpadea para indicar el golpe.
+      this.scene.tweens.add({
+        targets: this,
+        alpha: 0.5,
+        duration: 100,
+        yoyo: true, // Hace que la animación vaya y vuelva (0.5 -> 1.0)
+        repeat: 2, // Repite el parpadeo un par de veces
+        onStart: () => {
+          this.setTint(0xff0000); // Tinte rojo al ser golpeado
+        },
+        onComplete: () => {
+          this.clearTint(); // Quitar el tinte al final
+          this.alpha = 1; // Asegurarse de que la transparencia vuelva a la normalidad
+        }
       });
     }
-
-    // animación de "muerte" del enemigo
-    this.scene.tweens.add({
-      targets: this,
-      y: this.y - 40,
-      alpha: 0,
-      duration: 500,
-      ease: 'Power1',
-      onComplete: () => {
-        this.setActive(false);
-        this.setVisible(false);
-        this.alpha = 1; // reset
-      }
-    });
-
   }
 
   stop() {

@@ -11,11 +11,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         // ⭐ AJUSTAR TAMAÑO DEL JUGADOR
         this.setScale(0.15);
-        
-        // Ajustar hitbox proporcionalmente
-        this.body.setSize(500, 150);
-        this.body.setOffset(10, 5);
+    
+        // ✅ Ajustar hitbox al tamaño real del sprite
+        this.body.setSize(650, 750);  // Tamaño en píxeles del sprite original
+        this.body.setOffset(187, 200); // Centrar en el cuerpo del ratón
 
+    
         this.isAlive = true;
         this.isThrowing = false;
 

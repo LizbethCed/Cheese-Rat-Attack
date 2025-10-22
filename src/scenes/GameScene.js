@@ -27,8 +27,6 @@ export default class GameScene extends Phaser.Scene {
     // Fondo
     this.add.image(512, 384, 'background');
 
-    // ✅ CREAR GRUPOS GLOBALES PRIMERO (antes de los tracks)
-    console.log('🔧 Creando grupos globales...');
     
     this.allEnemies = this.physics.add.group({
       runChildUpdate: true,
@@ -43,12 +41,6 @@ export default class GameScene extends Phaser.Scene {
     this.allEnemyProjectiles = this.physics.add.group({
       runChildUpdate: true,
       allowGravity: false
-    });
-
-    console.log('✅ Grupos creados:', {
-      enemies: this.allEnemies,
-      playerProj: this.allPlayerProjectiles,
-      enemyProj: this.allEnemyProjectiles
     });
 
     // Crear las 4 pistas (ahora sí pueden usar los grupos)
@@ -86,10 +78,6 @@ export default class GameScene extends Phaser.Scene {
       color: '#ffffff'
     });
 
-    // ✅ COLISIONES GLOBALES - DESPUÉS de crear todo
-    console.log('🔧 Configurando colisiones globales...');
-    console.log('Total enemigos:', this.allEnemies.getLength());
-    console.log('Total proyectiles jugador:', this.allPlayerProjectiles.getLength());
     
     // Colisión: Proyectiles jugador → Enemigos
     this.physics.add.overlap(
@@ -109,12 +97,20 @@ export default class GameScene extends Phaser.Scene {
       this
     );
 
-    console.log('✅ Colisiones configuradas');
+    // ✅ COLISIÓN: Proyectiles enemigos → Jugador (¡ESTA FALTABA DE NUEVO!)
+    this.physics.add.overlap(
+      this.player,
+      this.allEnemyProjectiles,
+      this.hitPlayer,
+      null,
+      this
+    );
+
 
     // ✅ AÑADIR DEBUG VISUAL DE FÍSICAS
-    /* this.physics.world.createDebugGraphic();
+    this.physics.world.createDebugGraphic();
   this.physics.world.defaults.debugShowBody = true;
-  this.physics.world.defaults.debugShowVelocity = false; */
+  this.physics.world.defaults.debugShowVelocity = false; 
 
 
     // Función de verificación para el overlap
@@ -170,10 +166,10 @@ export default class GameScene extends Phaser.Scene {
     this.player.start();
 
     // Iniciar las pistas con diferentes delays
-    this.tracks[0].start(4000, 8000);
-    this.tracks[1].start(500, 1000);
-    this.tracks[2].start(5000, 9000);
-    this.tracks[3].start(6000, 10000);
+    this.tracks[0].start(3000, 5000); // Antes: 4000, 8000
+    this.tracks[1].start(2000, 4000); // Antes: 500, 1000 
+    this.tracks[2].start(4000, 6000); // Antes: 5000, 9000
+    this.tracks[3].start(5000, 7000); // Antes: 6000, 10000
 
   }
 
@@ -246,6 +242,25 @@ export default class GameScene extends Phaser.Scene {
     
     playerProj.destroy();
     enemyProj.destroy();
+  }
+
+  hitPlayer(player, enemyProj) {
+    console.log('💥 COLISIÓN DETECTADA: Jugador golpeado por proyectil enemigo');
+
+    // Evitar que se llame a gameOver múltiples veces si el jugador ya no está vivo
+    if (!player.isAlive) {
+      return;
+    }
+
+    // Destruir el proyectil que impactó
+    enemyProj.destroy();
+
+    // Ocultar al jugador y detenerlo
+    player.setVisible(false);
+    player.stop();
+
+    // Iniciar la secuencia de Game Over
+    this.gameOver();
   }
 
   gameOver() {

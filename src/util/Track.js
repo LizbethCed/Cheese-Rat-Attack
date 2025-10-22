@@ -30,15 +30,37 @@ export default class Track {
   }
 
   start(minDelay, maxDelay) {
-    const delay = Phaser.Math.Between(minDelay, maxDelay);
+
+    this.snowmanSmall.start();
+
+
+    // Función para obtener un nuevo delay aleatorio para ambos tipos de enemigos
+    const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
+
+    // Temporizador para el enemigo pequeño (snowmanSmall)
     this.releaseTimerSmall = this.scene.time.addEvent({
-      delay,
-      callback: () => this.snowmanSmall.start()
+      delay: getDelay(),
+      callback: () => {
+        if (!this.snowmanSmall.isAlive) {
+          this.snowmanSmall.start();
+        }
+        // Asignamos un nuevo delay aleatorio para la siguiente aparición
+        this.releaseTimerSmall.delay = getDelay();
+      },
+      loop: true
     });
 
+    // Temporizador para el enemigo grande (snowmanBig)
     this.releaseTimerBig = this.scene.time.addEvent({
-      delay: delay * 3,
-      callback: () => this.snowmanBig.start()
+      delay: getDelay() * 2,
+      callback: () => {
+        if (!this.snowmanBig.isAlive) {
+          this.snowmanBig.start();
+        }
+        // ✅ Corregido: actualiza su propio delay, no el del otro timer
+        this.releaseTimerBig.delay = getDelay() * 2;
+      },
+      loop: true
     });
   }
 
@@ -73,7 +95,7 @@ export default class Track {
   }
 
   throwEnemySnowball(x) {
-    const snowball = new EnemyShoot(this.scene, x, this.y, 'projectile');
+    const snowball = new EnemyShoot(this.scene, x, this.y, 'projectileEnemy');
     this.scene.add.existing(snowball);
     this.scene.physics.add.existing(snowball);
     
