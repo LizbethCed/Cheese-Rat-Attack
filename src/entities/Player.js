@@ -37,7 +37,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.currentTrack = this.scene.tracks[0];
         this.y = this.currentTrack.y;
         
-        console.log('👤 Player iniciado en track', this.currentTrack.id);
+        // console.log('👤 Player iniciado en track', this.currentTrack.id);
     }
 
     moveUp() {
@@ -49,7 +49,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         
         this.y = this.currentTrack.y;
         
-        console.log('⬆️ Movido a track', this.currentTrack.id);
+        //console.log('⬆️ Movido a track', this.currentTrack.id);
         
         if (this.sound.get('move')) {
             this.sound.play('move');
@@ -65,7 +65,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         
         this.y = this.currentTrack.y;
         
-        console.log('⬇️ Movido a track', this.currentTrack.id);
+       // console.log('⬇️ Movido a track', this.currentTrack.id);
         
         if (this.sound.get('move')) {
             this.sound.play('move');
@@ -74,11 +74,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     throw() {
         if (this.isThrowing) {
-            console.log('⏳ Ya está disparando, ignorando...');
+            //console.log('⏳ Ya está disparando, ignorando...');
             return;
         }
         
-        console.log('🎯 DISPARO INICIADO en track', this.currentTrack.id);
+        //console.log('🎯 DISPARO INICIADO en track', this.currentTrack.id);
         
         this.isThrowing = true;
         
@@ -93,12 +93,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     releaseSnowball() {
-        console.log('❄️ Liberando proyectil desde posición', {
+       /*  console.log('❄️ Liberando proyectil desde posición', {
             playerX: this.x,
             playerY: this.y,
             trackId: this.currentTrack.id,
             trackY: this.currentTrack.y
-        });
+        }); */
         
         // Disparar en el track actual
         this.currentTrack.throwPlayerSnowball(this.x);
@@ -110,7 +110,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     throwComplete() {
         this.isThrowing = false;
-        console.log('✅ Disparo completado, listo para siguiente');
+        // .log('✅ Disparo completado, listo para siguiente');
     }
 
     stop() {

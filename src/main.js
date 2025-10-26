@@ -8,9 +8,9 @@ import GameOverScene from "./scenes/GameOverScene.js";
 
 const config = {
     type: Phaser.AUTO,
-    width: 2000,
-    height: 820,
-    backgroundColor: "#3BACD9",
+    width: 960,
+    height: 720,
+    backgroundColor: "#1BBFAF",
     physics: { default: "arcade" },
     scene: [BootScene, PreloadScene, OptionsScene, CreditsScene, MenuScene, GameScene, GameOverScene]
 };

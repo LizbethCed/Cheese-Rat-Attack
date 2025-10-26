@@ -10,7 +10,7 @@ export default class Track {
 
     // Nido del lado derecho (jugador)
     this.nest = scene.physics.add
-      .image(2000, trackY - 10, 'nest')
+      .image(1024, trackY - 10, 'nest')
       .setOrigin(1, 1)
       .setScale(0.4);
 
@@ -22,7 +22,7 @@ export default class Track {
     if (scene.allEnemies) {
       scene.allEnemies.add(this.snowmanBig);
       scene.allEnemies.add(this.snowmanSmall);
-      console.log(`✅ Enemigos del track ${id} añadidos al grupo global`);
+      //console.log(`✅ Enemigos del track ${id} añadidos al grupo global`);
     }
 
     this.releaseTimerSmall = null;
@@ -52,7 +52,7 @@ export default class Track {
 
     // Temporizador para el enemigo grande (snowmanBig)
     this.releaseTimerBig = this.scene.time.addEvent({
-      delay: getDelay() * 2,
+      delay: getDelay() * .5,
       callback: () => {
         if (!this.snowmanBig.isAlive) {
           this.snowmanBig.start();
@@ -76,7 +76,7 @@ export default class Track {
   // Disparos
   // =========================
   throwPlayerSnowball(x) {
-    console.log('🔫 Disparando proyectil del jugador en track', this.id);
+    //console.log('🔫 Disparando proyectil del jugador en track', this.id);
     
     // Crear nuevo proyectil (sin posición inicial para evitar conflictos)
     const snowball = new PlayerShoot(this.scene, 0, 0, 'projectile');
@@ -87,11 +87,11 @@ export default class Track {
     // Activar proyectil
     snowball.fire(x, this.y);
     
-    console.log('✅ Proyectil añadido al grupo global', {
+    /* console.log('✅ Proyectil añadido al grupo global', {
       x: snowball.x,
       y: snowball.y,
       totalProjectiles: this.scene.allPlayerProjectiles.getLength()
-    });
+    }); */
   }
 
   throwEnemySnowball(x) {

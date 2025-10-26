@@ -11,8 +11,14 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     create() {
-        this.add.image(0, 0, 'background_menu').setOrigin(0).setDisplaySize(this.sys.game.config.width, this.sys.game.config.height);
-
+      // Crear fondo con gradiente
+        const width = this.sys.game.config.width;
+        const height = this.sys.game.config.height;
+        
+        const graphics = this.add.graphics();
+        graphics.fillGradientStyle(0xF2B90C, 0xF2B90C, 0x1BBFAF, 0x1BBFAF, 1);
+        graphics.fillRect(0, 0, width, height);
+ 
 
         // Reproducir música de fondo 
         if (!this.sound.get('music_menu')) {
@@ -23,7 +29,7 @@ export default class MenuScene extends Phaser.Scene {
         const centerX = this.cameras.main.centerX;
 
         // Logo
-        this.add.image(centerX, 150, "logo").setScale(0.9);
+        this.add.image(centerX, 160, "logo").setScale(0.4);
 
         // Opciones de menú
         const opciones = [
@@ -35,9 +41,10 @@ export default class MenuScene extends Phaser.Scene {
         const btnWidth = 320;
         const btnHeight = 64;
         const btnSpacing = 80;
-        const startY = 320;
+        const startY = 360;
 
         opciones.forEach((op, i) => {
+
             // Botón
             const btn = this.add.image(centerX, startY + i * btnSpacing, "btnBlue")
                 .setDisplaySize(btnWidth, btnHeight)
@@ -47,7 +54,7 @@ export default class MenuScene extends Phaser.Scene {
             const txt = this.add.text(centerX, startY + i * btnSpacing, op.texto, {
                 fontSize: "32px",
                 fill: "#203c5b",
-                fontFamily: "Arial"
+                fontFamily: "CartoonFont"
             }).setOrigin(0.5);
 
             // Interactividad
