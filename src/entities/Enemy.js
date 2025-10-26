@@ -50,7 +50,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   start() {
-    console.log(`🐱 Enemigo ${this.size} INICIANDO en track ${this.currentTrack.id}`);
+    //console.log(`🐱 Enemigo ${this.size} INICIANDO en track ${this.currentTrack.id}`);
 
     this.isAlive = true;
     this.isThrowing = false;
@@ -72,7 +72,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
       const startX = this.size === "Small" ? 80 : -100;
       this.body.reset(startX, this.currentTrack.y);
 
-      console.log(`🔄 Enemigo ${this.size} REINICIADO en ${startX}, ${this.currentTrack.y}`);
+      // console.log(`🔄 Enemigo ${this.size} REINICIADO en ${startX}, ${this.currentTrack.y}`);
 
       // Forzar la reactivación en el grupo de físicas
       if (this.scene.allEnemies) {
@@ -85,13 +85,13 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.body.debugShowBody = true;
       this.body.debugBodyColor = 0xff0000;
 
-      console.log(`✅ Enemigo ${this.size} body habilitado`, {
+      /* console.log(`✅ Enemigo ${this.size} body habilitado`, {
         x: this.x,
         y: this.y,
         bodyEnabled: this.body.enable,
         active: this.active,
         visible: this.visible
-      });
+      }); */
     } else {
       console.error(`❌ ERROR: Enemigo ${this.size} no tiene body`);
     }

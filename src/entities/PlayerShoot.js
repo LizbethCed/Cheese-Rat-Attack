@@ -45,7 +45,7 @@ export default class PlayerShoot extends Phaser.Physics.Arcade.Sprite {
     });
 
     // Log para depuración
-    console.log("💥 Disparo lanzado desde:", x, y);
+    // console.log("💥 Disparo lanzado desde:", x, y);
   }
 
   stop() {
@@ -62,7 +62,7 @@ export default class PlayerShoot extends Phaser.Physics.Arcade.Sprite {
     // Si el proyectil sale de la pantalla por la izquierda, se desactiva
     if (this.x < -50) {
       this.stop();
-      console.log("🧊 Disparo eliminado (fuera de pantalla)");
+      //console.log("🧊 Disparo eliminado (fuera de pantalla)");
     }
   }
 }

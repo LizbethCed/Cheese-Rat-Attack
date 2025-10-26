@@ -29,7 +29,7 @@ export default class GameScene extends Phaser.Scene {
     this.levelMessage = null;
 
     // Fondo
-    this.backgroundImage = this.add.image(5, 384, 'background');
+    this.backgroundImage = this.add.image(512, 384, 'background');
     this.backgroundImage.setDepth(-10);
 
     // Imagen decorativa del jugador al extremo derecho
@@ -65,17 +65,17 @@ export default class GameScene extends Phaser.Scene {
     this.player.start();
 
     // Panel de información inicial
-    this.infoPanel = this.add.image(1000, 384, 'controls');
+    this.infoPanel = this.add.image(512, 384, 'controls').setScale(0.3);
 
     // Texto de puntuación (esquina superior derecha)
-    this.add.text(1000, 2, 'Puntos:', {
-      fontFamily: 'Arial',
+    this.add.text(720, 2, 'Puntos:', {
+      fontFamily: 'CartoonFont',
       fontSize: 32,
       color: '#ffffff'
-    }).setDepth(10);
+    });
 
     this.scoreText = this.add.text(840, 2, this.score, {
-      fontFamily: 'Arial',
+      fontFamily: 'CartoonFont',
       fontSize: 32,
       color: '#ffffff'
     });
@@ -83,7 +83,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Texto de récord (debajo del contador de puntos)
     this.highscoreText = this.add.text(720, 42, `Record: ${this.highscore}`, {
-      fontFamily: 'Arial',
+      fontFamily: 'CartoonFont',
       fontSize: 32,
       color: '#ffffff'
     });
@@ -119,21 +119,21 @@ export default class GameScene extends Phaser.Scene {
 
 
     // ✅ AÑADIR DEBUG VISUAL DE FÍSICAS
-    this.physics.world.createDebugGraphic();
-  this.physics.world.defaults.debugShowBody = true;
-  this.physics.world.defaults.debugShowVelocity = false; 
+    /* this.physics.world.createDebugGraphic();
+    this.physics.world.defaults.debugShowBody = true;
+    this.physics.world.defaults.debugShowVelocity = false */; 
 
 
     // Función de verificación para el overlap
     this.checkCollision = (projectile, enemy) => {
-      console.log('🔎 Verificando colisión...', {
+     /* onsole.log('🔎 Verificando colisión...', {
         projActive: projectile.active,
         projBody: projectile.body.enable,
         enemyActive: enemy.active,
         enemyAlive: enemy.isAlive,
         enemyBody: enemy.body.enable,
-      });
-
+      });*/
+       
       // La colisión solo debe ocurrir si ambos están "vivos" y activos
       return projectile.active && enemy.active && enemy.isAlive;
     };
@@ -177,7 +177,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.levelMessage = this.add.text(512, 100, 'Segundo nivel', {
-      fontFamily: 'Arial',
+      fontFamily: 'CartoonFont',
       fontSize: 48,
       color: '#ffeb3b',
       stroke: '#000000',
@@ -230,7 +230,7 @@ export default class GameScene extends Phaser.Scene {
     const activeProjectiles = this.allPlayerProjectiles.getChildren().filter(p => p.active);
     const activeEnemies = this.allEnemies.getChildren().filter(e => e.active && e.isAlive);
 
-    if (activeProjectiles.length > 0 && activeEnemies.length > 0) {
+    /* if (activeProjectiles.length > 0 && activeEnemies.length > 0) {
       // Hay proyectiles y enemigos activos, verificar overlap manual
       activeProjectiles.forEach(proj => {
         activeEnemies.forEach(enemy => {
@@ -246,25 +246,24 @@ export default class GameScene extends Phaser.Scene {
           }
         });
       });
-    }
+    } */
   }
 
   // ===========================================
   // 🎯 COLISIONES GLOBALES
   // ===========================================
   hitEnemy(projectile, enemy) {
-    console.log('💥 COLISIÓN DETECTADA: Proyectil → Enemigo', {
+    /* console.log('💥 COLISIÓN DETECTADA: Proyectil → Enemigo', {
       projectileX: projectile.x,
       enemyX: enemy.x,
       enemyAlive: enemy.isAlive
-    });
+    }); */
 
     if (!enemy.isAlive || !projectile.active) {
-      console.log('❌ Colisión ignorada - condiciones no cumplidas');
+      //console.log('❌ Colisión ignorada - condiciones no cumplidas');
       return;
     }
 
-    console.log('✅ ELIMINANDO ENEMIGO');
 
     const points = enemy.size === 'Small' ? 5 : 10;
     this.addScore(points);
@@ -287,7 +286,6 @@ export default class GameScene extends Phaser.Scene {
   }
 
   hitProjectiles(playerProj, enemyProj) {
-    console.log('💥 Colisión proyectil vs proyectil');
     
     if (!playerProj?.active || !enemyProj?.active) return;
     
@@ -296,7 +294,6 @@ export default class GameScene extends Phaser.Scene {
   }
 
   hitPlayer(player, enemyProj) {
-    console.log('💥 COLISIÓN DETECTADA: Jugador golpeado por proyectil enemigo');
 
     // Evitar que se llame a gameOver múltiples veces si el jugador ya no está vivo
     if (!player.isAlive) {

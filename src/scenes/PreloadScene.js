@@ -13,6 +13,11 @@ export default class PreloadScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // =========================
+    // FUENTES PERSONALIZADAS
+    // =========================
+    this.add.text(0, 0, '', { fontFamily: 'CartoonFont' }).setVisible(false);
+
+    // =========================
     // IMÁGENES DE FONDO / UI
     // =========================
     this.load.image("background_menu", "assets/images/background_menu.png");

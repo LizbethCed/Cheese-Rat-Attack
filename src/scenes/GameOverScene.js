@@ -20,7 +20,7 @@ export default class GameOverScene extends Phaser.Scene {
     this.add.text(centerX, centerY - 150, "GAME OVER", {
       fontSize: "72px",
       fill: "#ff0000",
-      fontFamily: "Arial",
+      fontFamily: "CartoonFont",
       stroke: "#000000",
       strokeThickness: 8
     }).setOrigin(0.5);
@@ -29,7 +29,7 @@ export default class GameOverScene extends Phaser.Scene {
     this.add.text(centerX, centerY - 50, "Tu puntaje: " + this.finalScore, {
       fontSize: "42px",
       fill: "#ffffff",
-      fontFamily: "Arial",
+      fontFamily: "CartoonFont",
       stroke: "#000000",
       strokeThickness: 4
     }).setOrigin(0.5);
@@ -39,7 +39,7 @@ export default class GameOverScene extends Phaser.Scene {
     this.add.text(centerX, centerY + 20, "Mejor puntaje: " + bestScore, {
       fontSize: "36px",
       fill: "#ffff00",
-      fontFamily: "Arial",
+      fontFamily: "CartoonFont",
       stroke: "#000000",
       strokeThickness: 4
     }).setOrigin(0.5);
@@ -48,7 +48,7 @@ export default class GameOverScene extends Phaser.Scene {
     const btnRetry = this.add.text(centerX, centerY + 100, "REINTENTAR", {
       fontSize: "38px",
       fill: "#00ff00",
-      fontFamily: "Arial",
+      fontFamily: "CartoonFont",
       stroke: "#000000",
       strokeThickness: 4
     })
@@ -64,8 +64,8 @@ export default class GameOverScene extends Phaser.Scene {
     // Botón Menú
     const btnMenu = this.add.text(centerX, centerY + 160, "MENÚ PRINCIPAL", {
       fontSize: "32px",
-      fill: "#00aaff",
-      fontFamily: "Arial",
+      fill: "#1BBFAF",
+      fontFamily: "CartoonFont",
       stroke: "#000000",
       strokeThickness: 4
     })
