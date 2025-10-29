@@ -19,10 +19,15 @@ export default class MenuScene extends Phaser.Scene {
         graphics.fillGradientStyle(0xF2B90C, 0xF2B90C, 0x1BBFAF, 0x1BBFAF, 1);
         graphics.fillRect(0, 0, width, height);
  
+        // Detener otras músicas antes de reproducir la del menú
+        this.sound.stopAll();
 
         // Reproducir música de fondo 
-        if (!this.sound.get('music_menu')) {
-            const music = this.sound.add('music_menu', { loop: true, volume: 0.5 });
+        let music = this.sound.get('music_menu');
+        if (!music) {
+            music = this.sound.add('music_menu', { loop: true, volume: 0.5 });
+        }
+        if (!music.isPlaying) {
             music.play();
         }
 
@@ -62,6 +67,7 @@ export default class MenuScene extends Phaser.Scene {
             btn.on("pointerout", () => btn.clearTint());
             btn.on("pointerdown", () => {
                 this.sound.play("click");
+                if (op.escena === 'GameScene') this.sound.stopAll();
                 this.scene.start(op.escena);
             });
 
@@ -70,8 +76,10 @@ export default class MenuScene extends Phaser.Scene {
             txt.on("pointerout", () => btn.clearTint());
             txt.on("pointerdown", () => {
                 this.sound.play("click");
+                if (op.escena === 'GameScene') this.sound.stopAll();
                 this.scene.start(op.escena);
             });
         });
     }
+    
 }

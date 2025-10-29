@@ -29,6 +29,10 @@ export default class PlayerShoot extends Phaser.Physics.Arcade.Sprite {
     this.setVisible(true);
     this.body.enable = true;
 
+    //Efecto de sonido al disparar (asegúrate de tener el sonido cargado)
+
+    this.scene.sound.play('shoot', { volume: 0.5 });
+
     // ✅ Posición inicial: A la izquierda del jugador, pero en la MISMA ALTURA Y del carril.
     this.body.reset(x - 10, y - 40);
 

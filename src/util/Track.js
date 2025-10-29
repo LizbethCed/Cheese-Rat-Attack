@@ -52,7 +52,7 @@ export default class Track {
 
     // Temporizador para el enemigo grande (snowmanBig)
     this.releaseTimerBig = this.scene.time.addEvent({
-      delay: getDelay() * .5,
+      delay: getDelay() * 3,
       callback: () => {
         if (!this.snowmanBig.isAlive) {
           this.snowmanBig.start();
