@@ -19,6 +19,8 @@ export default class GameScene extends Phaser.Scene {
     this.highscoreText = null;
     this.level2Reached = false;
     this.levelMessage = null;
+    this.level1Music = null;
+    this.level2Music = null;
   }
 
   create() {
@@ -27,6 +29,13 @@ export default class GameScene extends Phaser.Scene {
     this.previousHighscore = this.highscore;
     this.level2Reached = false;
     this.levelMessage = null;
+    this.level1Music = null;
+    this.level2Music = null;
+
+    // Detener toda la música anterior y empezar la del nivel 1
+    this.sound.stopAll();
+    this.level1Music = this.sound.add('nivel1', { loop: true, volume: 1 });
+    this.level1Music.play();
 
     // Fondo
     this.backgroundImage = this.add.image(512, 384, 'background');
@@ -142,6 +151,11 @@ export default class GameScene extends Phaser.Scene {
     this.input.keyboard.once('keydown-SPACE', this.start, this);
     this.input.keyboard.once('keydown-UP', this.start, this);
     this.input.keyboard.once('keydown-DOWN', this.start, this);
+
+     // ESC para volver
+    this.input.keyboard.once("keydown-ESC", () => {
+      this.scene.start("MenuScene");
+    });
   }
 
   addScore(points = 1) {
@@ -166,6 +180,15 @@ export default class GameScene extends Phaser.Scene {
 
   reachSecondLevel() {
     this.level2Reached = true;
+
+    // Cambiar la música para el nivel 2
+    if (this.level1Music) {
+      this.level1Music.stop();
+    }
+    if (!this.level2Music) {
+      this.level2Music = this.sound.add('nivel2', { loop: true, volume: 0.4 });
+    }
+    this.level2Music.play();
 
     if (this.backgroundImage) {
       this.backgroundImage.setTexture('esenario2');
@@ -222,6 +245,11 @@ export default class GameScene extends Phaser.Scene {
     this.tracks[2].start(4000, 6000); // Antes: 5000, 9000
     this.tracks[3].start(5000, 7000); // Antes: 6000, 10000
 
+     // ESC para volver
+    this.input.keyboard.once("keydown-ESC", () => {
+      this.scene.start("MenuScene");
+    });
+
   }
 
   // 🔍 DEBUG: Verificar colisiones manualmente
@@ -267,6 +295,9 @@ export default class GameScene extends Phaser.Scene {
 
     const points = enemy.size === 'Small' ? 5 : 10;
     this.addScore(points);
+
+    this.sound.play('enemy_kill', { volume: 0.5 });
+
 
     // Destruir el proyectil y golpear al enemigo
     projectile.destroy();
@@ -314,7 +345,8 @@ export default class GameScene extends Phaser.Scene {
   gameOver() {
     // Cambiar a panel de game over
     this.infoPanel.setTexture('gameover');
-
+    this.infoPanel.setScale(0.5); // Aumentamos el tamaño de la imagen de Game Over
+    
     this.tweens.add({
       targets: this.infoPanel,
       y: 384,
@@ -329,9 +361,7 @@ export default class GameScene extends Phaser.Scene {
     // Detener audio
     this.sound.stopAll();
 
-    if (this.sound.get('gameover')) {
-      this.sound.play('gameover');
-    }
+    this.sound.play('gameover', { volume: 1 });
 
     // Detener el player
     this.player.stop();

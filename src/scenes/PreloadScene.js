@@ -25,7 +25,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("esenario2",       "assets/images/esenario2.png");
     this.load.image("overlay",         "assets/images/overlay.png");
     this.load.image("controls",        "assets/images/elementos/controls.png");
-    this.load.image("gameover",        "assets/images/gameover.png");
+    this.load.image("gameover",        "assets/images/elementos/gameover.png");
 
     // =========================
     // PERSONAJES / ENEMIGOS
@@ -58,14 +58,17 @@ export default class PreloadScene extends Phaser.Scene {
     // =========================
     // AUDIO
     // =========================
-    this.load.audio("shoot",     "assets/audio/shoot.wav");
+    this.load.audio("shoot",     "assets/audio/shoot.mp3");
     this.load.audio("move",      "assets/audio/move.wav");
     this.load.audio("hit",       "assets/audio/hit.wav");      // impacto
-    this.load.audio("pop",       "assets/audio/pop.wav");      // muerte/explosión
+    this.load.audio("enemy_kill",       "assets/audio/enemy_kill.mp3");      // muerte/explosión
     this.load.audio("gameover",  "assets/audio/gameover.wav");
-    // (Opcional)
+   
+    // (Música de fondo)
     this.load.audio("music",      "assets/audio/music.mp3");
-    this.load.audio("music_menu", "assets/audio/music_menu.wav");
+    this.load.audio("music_menu", "assets/audio/main_menu.mp3");
+    this.load.audio("nivel1",     "assets/audio/nivel1.mp3");
+    this.load.audio("nivel2",     "assets/audio/nivel2.mp3");
 
     // Botón (si lo usas en menú/UI)
     this.load.image("btnBlue", "assets/images/button_rectangle_depth_border.svg");

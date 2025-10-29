@@ -14,11 +14,21 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
+
+     // Inicialmente oculto/inactivo y sin cuerpo para evitar colisiones
+    this.setActive(false);
+    this.setVisible(false);
+    if (this.body) {
+      this.body.enable = false;
+    }
+
+   // No está "vivo" hasta que se llame a start()
+   this.isAlive = false;
+
     this.scene = scene;
     this.time = scene.time;
     this.sound = scene.sound;
 
-    this.isAlive = true;
     this.isThrowing = false;
     this.size = size;
     this.speed = 80; // Aumenta este valor para que avancen más rápido (ej: 80)
