@@ -107,10 +107,10 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Nivel 2: ≥150
-    if (!this.level2Reached && this.score >= 40) this.reachSecondLevel();
+    if (!this.level2Reached && this.score >= 150) this.reachSecondLevel();
 
     // Nivel 3: ≥200
-    if (!this.level3Reached && this.score >= 80) this.reachThirdLevel();
+    if (!this.level3Reached && this.score >= 350) this.reachThirdLevel();
   }
 
   // --- Aumenta dificultad (delays de spawn + timeScale global) ---
