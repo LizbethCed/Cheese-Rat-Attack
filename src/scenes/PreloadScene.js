@@ -23,6 +23,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("background_menu", "assets/images/background_menu.png");
     this.load.image("background",      "assets/images/background.png");
     this.load.image("esenario2",       "assets/images/esenario2.png");
+    this.load.image("nivel3",       "assets/images/nivel3.jpeg");
     this.load.image("overlay",         "assets/images/overlay.png");
     this.load.image("controls",        "assets/images/elementos/controls.png");
     this.load.image("gameover",        "assets/images/elementos/gameover.png");

@@ -29,6 +29,34 @@ export default class Track {
     this.releaseTimerBig = null;
   }
 
+  setEnemySpeeds({ small, big }) {
+    if (typeof small === 'number') {
+      this.snowmanSmall.speed = small;
+
+      if (
+        this.snowmanSmall.isAlive &&
+        this.snowmanSmall.previousAction === 0 &&
+        this.snowmanSmall.body &&
+        this.snowmanSmall.body.enable
+      ) {
+        this.snowmanSmall.setVelocityX(small);
+      }
+    }
+
+    if (typeof big === 'number') {
+      this.snowmanBig.speed = big;
+
+      if (
+        this.snowmanBig.isAlive &&
+        this.snowmanBig.previousAction === 0 &&
+        this.snowmanBig.body &&
+        this.snowmanBig.body.enable
+      ) {
+        this.snowmanBig.setVelocityX(big);
+      }
+    }
+  }
+
   start(minDelay, maxDelay) {
 
     this.snowmanSmall.start();
