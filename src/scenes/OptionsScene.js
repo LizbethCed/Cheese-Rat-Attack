@@ -9,7 +9,7 @@ export default class OptionsScene extends Phaser.Scene {
     this.add.text(centerX, 100, "OPCIONES", {
       fontSize: "54px",
       fill: "#ffffff",
-      fontFamily: "Arial",
+      fontFamily: "CartoonFont",
       stroke: "#000000",
       strokeThickness: 6
     }).setOrigin(0.5);
@@ -18,21 +18,21 @@ export default class OptionsScene extends Phaser.Scene {
     const volumeLabel = this.add.text(centerX, 250, "Volumen:", {
       fontSize: "32px",
       fill: "#ffffff",
-      fontFamily: "Arial"
+      fontFamily: "CartoonFont"
     }).setOrigin(0.5);
 
     const volume = this.sound.volume * 100;
     const volumeText = this.add.text(centerX, 300, Math.round(volume) + "%", {
       fontSize: "36px",
       fill: "#ffff00",
-      fontFamily: "Arial"
+      fontFamily: "CartoonFont"
     }).setOrigin(0.5);
 
     // Botones de volumen
     const btnVolumeDown = this.add.text(centerX - 100, 300, "-", {
       fontSize: "48px",
       fill: "#ff0000",
-      fontFamily: "Arial"
+      fontFamily: "CartoonFont"
     })
     .setOrigin(0.5)
     .setInteractive({ useHandCursor: true });
@@ -40,7 +40,7 @@ export default class OptionsScene extends Phaser.Scene {
     const btnVolumeUp = this.add.text(centerX + 100, 300, "+", {
       fontSize: "48px",
       fill: "#00ff00",
-      fontFamily: "Arial"
+      fontFamily: "CartoonFont"
     })
     .setOrigin(0.5)
     .setInteractive({ useHandCursor: true });
@@ -61,7 +61,7 @@ export default class OptionsScene extends Phaser.Scene {
     const btnBack = this.add.text(centerX, 500, "VOLVER", {
       fontSize: "42px",
       fill: "#00aaff",
-      fontFamily: "Arial",
+      fontFamily: "CartoonFont",
       stroke: "#000000",
       strokeThickness: 4
     })

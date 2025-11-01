@@ -114,12 +114,7 @@ export default class Track {
     
     // Activar proyectil
     snowball.fire(x, this.y);
-    
-    /* console.log('✅ Proyectil añadido al grupo global', {
-      x: snowball.x,
-      y: snowball.y,
-      totalProjectiles: this.scene.allPlayerProjectiles.getLength()
-    }); */
+
   }
 
   throwEnemySnowball(x) {

@@ -25,6 +25,12 @@ export default class GameScene extends Phaser.Scene {
     this.level1Music = null;
     this.level2Music = null;
     this.level3Music = null;
+
+    // Jefe final
+    this.finalBoss = null;
+    this.bossHealthBar = null;
+    this.bossHealthBarBg = null;
+    this.bossMaxHealth = 50; // Vida del jefe
   }
 
   create() {
@@ -39,10 +45,15 @@ export default class GameScene extends Phaser.Scene {
     this.level1Music = null;
     this.level2Music = null;
     this.level3Music = null;
+    this.finalBoss = null;
+    this.bossHealthBar = null;
+    this.bossHealthBarBg = null;
+
+
 
     // Música nivel 1
     this.sound.stopAll();
-    this.level1Music = this.sound.add('nivel1', { loop: true, volume: 1 });
+    this.level1Music = this.sound.add('nivel1', { loop: true, volume: 3 });
     this.level1Music.play();
 
     // Fondo
@@ -114,16 +125,13 @@ export default class GameScene extends Phaser.Scene {
   }
 
   // --- Aumenta dificultad (delays de spawn + timeScale global) ---
-  adjustDifficulty({ spawnMin, spawnMax, timeScale }) {
-    // Si el Track no tiene setter, paramos y reiniciamos con nuevos delays
+  adjustDifficulty({ spawnMin, spawnMax, timeScale, enemySpeedSmall, enemySpeedBig }) {
     this.tracks.forEach(t => {
-      if (typeof t.setDifficulty === 'function') {
-        t.setDifficulty({ spawnMin, spawnMax });
-      } else if (typeof t.setSpawnRange === 'function') {
-        t.setSpawnRange(spawnMin, spawnMax);
-      } else {
-        t.stop?.();
-        t.start(spawnMin, spawnMax);
+      t.stop?.();
+      t.start(spawnMin, spawnMax);
+
+      if (typeof t.setEnemySpeeds === 'function') {
+        t.setEnemySpeeds({ small: enemySpeedSmall, big: enemySpeedBig });
       }
     });
 
@@ -139,7 +147,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Música
     this.level1Music?.stop();
-    if (!this.level2Music) this.level2Music = this.sound.add('nivel2', { loop: true, volume: 0.4 });
+    if (!this.level2Music) this.level2Music = this.sound.add('nivel2', { loop: true, volume: 0.9 });
     this.level2Music.play();
 
     // Fondo
@@ -149,7 +157,9 @@ export default class GameScene extends Phaser.Scene {
     this.adjustDifficulty({
       spawnMin: 1500,  // antes de 2–5s aprox
       spawnMax: 3000,
-      timeScale: 1.15  // acelera física/timers ~15%
+      timeScale: 1.15,  // acelera física/timers ~15%
+      enemySpeedSmall: 120, // Aumenta la velocidad del enemigo pequeño
+      enemySpeedBig: 100    // Aumenta la velocidad del enemigo grande
     });
 
     // Mensaje
@@ -180,12 +190,34 @@ export default class GameScene extends Phaser.Scene {
     // Fondo nivel 3
     this.backgroundImage?.setTexture('nivel3');
 
-    // ⚡⚡ Dificultad nivel 3 (más rápido que el 2)
-    this.adjustDifficulty({
-      spawnMin: 900,
-      spawnMax: 1800,
-      timeScale: 1.30  // acelera física/timers ~30%
-    });
+    // Crear al jefe final
+    this.finalBoss = this.physics.add.sprite(250, this.scale.height / 2, 'final_boss');
+    this.finalBoss.setOrigin(0.8, 0.5);
+    this.finalBoss.setScale(0.3); // Ajusta la escala como necesites
+    this.finalBoss.setImmovable(true); // El jefe no se mueve al ser golpeado
+    this.finalBoss.body.setAllowGravity(false);
+    this.finalBoss.health = this.bossMaxHealth;
+    this.finalBoss.isAlive = true;
+    this.finalBoss.isBoss = true; // Flag para identificarlo
+
+    // Añadirlo al grupo de enemigos para que las colisiones funcionen
+    this.allEnemies.add(this.finalBoss);
+
+    // Crear la barra de vida del jefe
+    const barWidth = 400;
+    const barHeight = 25;
+    const barX = this.scale.width / 2;
+    const barY = 50;
+
+    this.bossHealthBarBg = this.add.graphics();
+    this.bossHealthBarBg.fillStyle(0x000000, 0.5);
+    this.bossHealthBarBg.fillRect(barX - barWidth / 2, barY - barHeight / 2, barWidth, barHeight);
+    this.bossHealthBarBg.setDepth(20);
+
+    this.bossHealthBar = this.add.graphics();
+    this.bossHealthBar.fillStyle(0xff0000, 1);
+    this.bossHealthBar.fillRect(barX - barWidth / 2, barY - barHeight / 2, barWidth, barHeight);
+    this.bossHealthBar.setDepth(21);
 
     // Mensaje
     this.levelMessage?.destroy();
@@ -225,18 +257,42 @@ export default class GameScene extends Phaser.Scene {
   hitEnemy(projectile, enemy) {
     if (!enemy.isAlive || !projectile.active) return;
 
-    const points = enemy.size === 'Small' ? 5 : 10;
-    this.addScore(points);
-    this.sound.play('enemy_kill', { volume: 0.5 });
-
     projectile.destroy();
-    enemy.hit();
 
-    if (this.anims.exists('snow_explode')) {
-      const explosion = this.add.sprite(enemy.x, enemy.y - 30, 'snow_explosion');
-      explosion.setScale(0.4);
-      explosion.play('snow_explode');
-      explosion.on('animationcomplete', () => explosion.destroy());
+    // --- Lógica para el JEFE FINAL ---
+    if (enemy.isBoss) {
+      enemy.health--;
+      this.sound.play('hit', { volume: 0.7 });
+
+      // Actualizar barra de vida
+      const barWidth = 400;
+      const percentage = enemy.health / this.bossMaxHealth;
+      this.bossHealthBar.clear();
+      this.bossHealthBar.fillStyle(0xff0000, 1);
+      this.bossHealthBar.fillRect((this.scale.width / 2) - barWidth / 2, 50 - 25 / 2, barWidth * percentage, 25);
+
+      if (enemy.health <= 0) {
+        enemy.isAlive = false;
+        this.sound.play('enemy_kill', { volume: 1.5 });
+        // Aquí podrías añadir una animación de explosión para el jefe
+        this.addScore(500); // Puntos extra por derrotar al jefe
+        this.gameOver(); // O una pantalla de "You Win"
+      }
+
+    // --- Lógica para enemigos normales ---
+    } else {
+      const points = enemy.size === 'Small' ? 5 : 10;
+      this.addScore(points);
+      this.sound.play('enemy_kill', { volume: 0.5 });
+
+      enemy.hit();
+
+      if (this.anims.exists('snow_explode')) {
+        const explosion = this.add.sprite(enemy.x, enemy.y - 30, 'snow_explosion');
+        explosion.setScale(0.4);
+        explosion.play('snow_explode');
+        explosion.on('animationcomplete', () => explosion.destroy());
+      }
     }
   }
 

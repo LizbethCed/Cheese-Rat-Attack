@@ -35,6 +35,8 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("snowman-small-idle0",   "assets/sprites/small_cat.png");
     this.load.image("snowman-big-throw",     "assets/sprites/big_cat.png");
 
+    this.load.image("final_boss",  "assets/sprites/final_boss.png");
+
     // =========================
     // ELEMENTOS / PROPS
     // =========================
