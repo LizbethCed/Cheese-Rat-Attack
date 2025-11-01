@@ -9,7 +9,7 @@ export default class CreditsScene extends Phaser.Scene {
     this.add.text(centerX, 100, "CRÉDITOS", {
       fontSize: "54px",
       fill: "#ffffff",
-      fontFamily: "Arial",
+      fontFamily: "CartoonFont",
       stroke: "#000000",
       strokeThickness: 6
     }).setOrigin(0.5);
@@ -35,7 +35,7 @@ export default class CreditsScene extends Phaser.Scene {
       this.add.text(centerX, 200 + index * 30, line, {
         fontSize: line === "" ? "20px" : "24px",
         fill: "#ffffff",
-        fontFamily: "Arial",
+        fontFamily: "CartoonFont",
         align: "center"
       }).setOrigin(0.5);
     });
@@ -44,7 +44,7 @@ export default class CreditsScene extends Phaser.Scene {
     const btnBack = this.add.text(centerX, 650, "VOLVER", {
       fontSize: "42px",
       fill: "#00aaff",
-      fontFamily: "Arial",
+      fontFamily: "CartoonFont",
       stroke: "#000000",
       strokeThickness: 4
     })
