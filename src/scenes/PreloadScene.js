@@ -23,7 +23,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("background_menu", "assets/images/background_menu.png");
     this.load.image("background",      "assets/images/background.png");
     this.load.image("esenario2",       "assets/images/esenario2.png");
-    this.load.image("nivel3",       "assets/images/nivel3.jpeg");
+    this.load.image("nivel3",          "assets/images/nivel3.jpeg");
     this.load.image("overlay",         "assets/images/overlay.png");
     this.load.image("controls",        "assets/images/elementos/controls.png");
     this.load.image("gameover",        "assets/images/elementos/gameover.png");
@@ -35,52 +35,60 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("snowman-small-idle0",   "assets/sprites/small_cat.png");
     this.load.image("snowman-big-throw",     "assets/sprites/big_cat.png");
 
-    this.load.image("final_boss",  "assets/sprites/final_boss.png");
+    // =========================
+    // JEFE FINAL - 6 FRAMES HORIZONTALES
+    // Dimensiones: 1280px × 311px
+    // Frames: 1280 ÷ 6 = 213.33px por frame
+    // =========================
+    this.load.spritesheet("final_boss", "assets/sprites/final_boss_spritesheet.png", {
+      frameWidth: 213,    // 1280 / 6 ≈ 213px
+      frameHeight: 263,   // Altura completa
+      margin: 0,
+      spacing: 0
+    });
 
     // =========================
     // ELEMENTOS / PROPS
     // =========================
     this.load.image("nest", "assets/images/elementos/nest.png");
 
-    // PROYECTILES (el juego usa 'projectile' como key principal)
-    this.load.image("projectile", "assets/images/bala.png");
-    this.load.image("snowball2",  "assets/images/bala.png");   // jugador
-    this.load.image("projectileEnemy",  "assets/images/balaEnemy.png");  // enemigo
+    // PROYECTILES
+    this.load.image("projectile",       "assets/images/bala.png");
+    this.load.image("snowball2",        "assets/images/bala.png");
+    this.load.image("projectileEnemy",  "assets/images/balaEnemy.png");
 
     // =========================
     // PARTÍCULA PARA MUERTE
     // =========================
     this.load.spritesheet("snow_explosion", "assets/images/particle_snow.png", {
-      frameWidth: 128,   // Ajusta según el tamaño real de cada frame
-      frameHeight: 128   // La imagen completa es 1024x1024, dividida en 8x8
+      frameWidth: 212,
+      frameHeight: 400
     });
 
     this.load.image("particle_snow", "assets/images/particle_snow.png");
 
-
     // =========================
     // AUDIO
     // =========================
-    this.load.audio("shoot",     "assets/audio/shoot.mp3");
-    this.load.audio("move",      "assets/audio/move.wav");
-    this.load.audio("hit",       "assets/audio/hit.wav");      // impacto
-    this.load.audio("enemy_kill",       "assets/audio/enemy_kill.mp3");      // muerte/explosión
-    this.load.audio("gameover",  "assets/audio/gameover.wav");
+    this.load.audio("shoot",       "assets/audio/shoot.mp3");
+    this.load.audio("move",        "assets/audio/move.wav");
+    this.load.audio("hit",         "assets/audio/hit.wav");
+    this.load.audio("enemy_kill",  "assets/audio/enemy_kill.mp3");
+    this.load.audio("gameover",    "assets/audio/gameover.wav");
    
-    // (Música de fondo)
-    this.load.audio("music",      "assets/audio/music.mp3");
-    this.load.audio("music_menu", "assets/audio/main_menu.mp3");
-    this.load.audio("nivel1",     "assets/audio/nivel1.mp3");
-    this.load.audio("nivel2",     "assets/audio/nivel2.mp3");
+    // Música
+    this.load.audio("music",       "assets/audio/music.mp3");
+    this.load.audio("music_menu",  "assets/audio/main_menu.mp3");
+    this.load.audio("nivel1",      "assets/audio/nivel1.mp3");
+    this.load.audio("nivel2",      "assets/audio/nivel2.mp3");
 
-    // Botón (si lo usas en menú/UI)
+    // UI
     this.load.image("btnBlue", "assets/images/button_rectangle_depth_border.svg");
-    // Extra (si lo usas en otro lado)
     this.load.image("cheese",  "assets/images/cheese.png");
   }
 
   create() {
-    // ====== Fallbacks por si falta el PNG de la partícula o projectile ======
+    // ====== Fallbacks ======
     if (!this.textures.exists("snow")) {
       const g1 = this.make.graphics({ x: 0, y: 0, add: false });
       g1.fillStyle(0xffffff, 1);
@@ -91,13 +99,44 @@ export default class PreloadScene extends Phaser.Scene {
 
     if (!this.textures.exists("projectile")) {
       const g2 = this.make.graphics({ x: 0, y: 0, add: false });
-      g2.fillStyle(0xFFD54F, 1); // amarillo "queso"
+      g2.fillStyle(0xFFD54F, 1);
       g2.fillRoundedRect(0, 0, 16, 16, 3);
       g2.generateTexture("projectile", 16, 16);
       g2.destroy();
     }
-    // =======================================================================
 
+    // ====== ANIMACIONES DEL JEFE FINAL ======
+    // 6 frames: 0, 1, 2, 3, 4, 5
+    
+    // Animación IDLE (frames 0-1): Respiración
+    this.anims.create({
+      key: 'final_boss_idle',
+      frames: this.anims.generateFrameNumbers('final_boss', { start: 0, end: 1 }),
+      frameRate: 4,
+      repeat: -1
+    });
+
+    // Animación TAUNT (frames 2-3): Rugido/provocación
+    this.anims.create({
+      key: 'final_boss_taunt',
+      frames: this.anims.generateFrameNumbers('final_boss', { start: 2, end: 3 }),
+      frameRate: 6,
+      repeat: 0
+    });
+
+    // Animación ATTACK (frames 4-5): Ataque
+    this.anims.create({
+      key: 'final_boss_attack',
+      frames: this.anims.generateFrameNumbers('final_boss', { start: 4, end: 5 }),
+      frameRate: 8,
+      repeat: 0
+    });
+
+    // Debug
+    console.log('🎮 Frames del jefe final:', this.textures.get('final_boss').frameTotal);
+    console.log('✅ Dimensiones por frame: 213x311px');
+    console.log('✅ Animaciones: idle (0-1), taunt (2-3), attack (4-5)');
+    
     this.scene.start("MenuScene");
   }
 }
