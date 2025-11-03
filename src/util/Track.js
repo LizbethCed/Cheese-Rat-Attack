@@ -11,8 +11,8 @@ export default class Track {
     // Nido del lado derecho (jugador)
     this.nest = scene.physics.add
       .image(1024, trackY - 10, 'nest')
-      .setOrigin(1, 1)
-      .setScale(0.4);
+      .setOrigin(1.3, 1)
+      .setScale(0.1);
 
     // Crear los enemigos individuales
     this.snowmanBig = new Enemy(scene, this, 'Big');
