@@ -134,8 +134,8 @@ export default class GameScene extends Phaser.Scene {
       this.registry.set('highscore', this.highscore);
     }
 
-    if (!this.level2Reached && this.score >= 10) this.reachSecondLevel();
-    if (!this.level3Reached && this.score >= 30) this.reachThirdLevel();
+    if (!this.level2Reached && this.score >= 150) this.reachSecondLevel();
+    if (!this.level3Reached && this.score >= 300) this.reachThirdLevel();
   }
 
   adjustDifficulty({ spawnMin, spawnMax, timeScale, enemySpeedSmall, enemySpeedBig }) {
@@ -802,7 +802,7 @@ hitEnemy(projectile, enemy) {
   const goBg = this.add.image(
     this.cameras.main.centerX,
     this.cameras.main.centerY,
-    'gameover_img'
+    'gameover'
   )
     .setOrigin(0.5)
     .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
@@ -810,7 +810,7 @@ hitEnemy(projectile, enemy) {
     .setAlpha(0);
 
   // Texto superior
-  const title = this.add.text(this.cameras.main.centerX, 220, '¡Game Over!', {
+  const title = this.add.text(this.cameras.main.centerX, 220, '', {
     fontFamily: 'CartoonFont',
     fontSize: 72,
     color: '#ffffff',
