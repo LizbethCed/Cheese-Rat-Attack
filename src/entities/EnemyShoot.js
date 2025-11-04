@@ -17,7 +17,7 @@ export default class EnemyShoot extends Phaser.Physics.Arcade.Sprite {
         this.body.setAllowGravity(false);
     }
 
-    fire(x, y) {
+    fire(x, y, speed = 500) {
         this.body.enable = true;
         
         this.setActive(true);
@@ -30,7 +30,7 @@ export default class EnemyShoot extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(true);
 
         // 🔹 Movimiento hacia la DERECHA (positivo)
-        this.setVelocityX(500);
+        this.setVelocityX(speed);
         this.setAccelerationX(800);
     }
 
