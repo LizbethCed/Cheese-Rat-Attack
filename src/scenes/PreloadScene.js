@@ -27,6 +27,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("overlay",         "assets/images/overlay.png");
     this.load.image("controls",        "assets/images/elementos/controls.png");
     this.load.image("gameover",        "assets/images/elementos/gameover.png");
+    this.load.image("descarga",        "assets/images/descarga_ui.png");
 
     // =========================
     // PERSONAJES / ENEMIGOS

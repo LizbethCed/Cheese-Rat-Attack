@@ -38,7 +38,7 @@ export default class GameScene extends Phaser.Scene {
     this.victoryOverlay = null;
     this.victoryPanel = null;
 
-    this.bossMaxHealth = 50;
+    this.bossMaxHealth = 150;
     this.totalFinalBosses = 1;
     this.finalBossSpawned = false;
     this.level3SmallSpawnCount = 0;
@@ -107,6 +107,10 @@ export default class GameScene extends Phaser.Scene {
     this.add.text(720, 2, 'Puntos:', { fontFamily: 'CartoonFont', fontSize: 32, color: '#ffffff' });
     this.scoreText = this.add.text(840, 2, this.score, { fontFamily: 'CartoonFont', fontSize: 32, color: '#ffffff' }).setDepth(10);
     this.highscoreText = this.add.text(720, 42, `Record: ${this.highscore}`, { fontFamily: 'CartoonFont', fontSize: 32, color: '#ffffff' }).setDepth(10);
+    this.descargaBadge = this.add.image(980, 70, 'descarga')
+      .setOrigin(1, 0.5)
+      .setScale(0.3)
+      .setDepth(9);
 
     // Colisiones
     this.physics.add.overlap(this.allPlayerProjectiles, this.allEnemies, this.hitEnemy, this.checkCollision, this);
@@ -319,13 +323,17 @@ export default class GameScene extends Phaser.Scene {
       boss.isAlive = true;
       boss.isBoss = true;
       boss.bossIndex = index;
-      boss.nextLaneY = laneYs.length ? laneYs[Phaser.Math.Between(0, laneYs.length - 1)] : this.scale.height / 2;
+      boss.currentLaneY = this.closestLaneY(boss.y, laneYs);
+      boss.nextLaneY = null;
+      boss.nextLaneTimer = null;
       boss.play?.('final_boss_idle');
 
       this.allEnemies.add(boss);
       this.finalBosses.push(boss);
       this.createBossHealthUI(boss, index);
       this.startBossAttackLoop(boss);
+      this.assignNextLane(boss, laneYs);
+      this.scheduleBossLaneChange(boss, laneYs);
     });
   }
 
@@ -379,6 +387,39 @@ export default class GameScene extends Phaser.Scene {
     boss.attackTimer = timer;
   }
 
+  closestLaneY(value, laneYs) {
+    if (!laneYs?.length) return value;
+    let closest = laneYs[0];
+    for (const lane of laneYs) {
+      if (Math.abs(lane - value) < Math.abs(closest - value)) closest = lane;
+    }
+    return closest;
+  }
+
+  pickNextLane(boss, laneYs) {
+    if (!laneYs?.length) return boss.currentLaneY ?? 0;
+    const options = laneYs.filter(y => Math.abs(y - (boss.currentLaneY ?? y)) > 1);
+    if (!options.length) return boss.currentLaneY ?? laneYs[0];
+    return options[Phaser.Math.Between(0, options.length - 1)];
+  }
+
+  assignNextLane(boss, laneYs) {
+    boss.nextLaneY = this.pickNextLane(boss, laneYs);
+  }
+
+  scheduleBossLaneChange(boss, laneYs) {
+    if (!boss?.isAlive) return;
+    boss.nextLaneTimer?.remove();
+    boss.nextLaneTimer = this.time.delayedCall(
+      Phaser.Math.Between(1200, 2200),
+      () => {
+        boss.nextLaneTimer = null;
+        if (!boss?.isAlive) return;
+        this.assignNextLane(boss, laneYs);
+      }
+    );
+  }
+
   onEnemySpawn(enemy) {
     if (!enemy) return;
     if (!this.level3Reached || this.finalBossSpawned) return;
@@ -396,7 +437,6 @@ export default class GameScene extends Phaser.Scene {
     if (!boss || !boss.isAlive) return;
 
     boss.play?.('final_boss_attack');
-
     boss.once('animationcomplete', () => {
       if (boss && boss.isAlive) {
         boss.play?.('final_boss_idle');
@@ -423,7 +463,7 @@ export default class GameScene extends Phaser.Scene {
     projectile.destroy();
 
     if (enemy.isBoss) {
-      enemy.health--;
+      enemy.health = Math.max(0, enemy.health - 30);
       this.sound.play('hit', { volume: 0.7 });
 
       enemy.play?.('final_boss_taunt', true);
@@ -468,6 +508,10 @@ export default class GameScene extends Phaser.Scene {
           enemy.attackTimer.destroy();
           Phaser.Utils.Array.Remove(this.bossAttackTimers, enemy.attackTimer);
           enemy.attackTimer = null;
+        }
+        if (enemy.nextLaneTimer) {
+          enemy.nextLaneTimer.remove();
+          enemy.nextLaneTimer = null;
         }
 
         enemy.play?.('final_boss_attack');
@@ -544,21 +588,29 @@ export default class GameScene extends Phaser.Scene {
     this.finalBosses.forEach(boss => {
       if (!boss?.isAlive || !boss.body) return;
 
-      if (!boss.nextLaneY || Math.abs(boss.y - boss.nextLaneY) < 5) {
-        const otherLanes = laneYs.filter(y => y !== boss.nextLaneY);
-        boss.nextLaneY = otherLanes.length
-          ? otherLanes[Phaser.Math.Between(0, otherLanes.length - 1)]
-          : laneYs[0];
+      boss.currentLaneY ??= this.closestLaneY(boss.y, laneYs);
+
+      if (boss.nextLaneY == null) {
+        if (!boss.nextLaneTimer) this.scheduleBossLaneChange(boss, laneYs);
+        boss.setVelocityY(0);
+      } else {
+        const dy = boss.nextLaneY - boss.y;
+        if (Math.abs(dy) <= 2) {
+          boss.setVelocityY(0);
+          boss.setY(boss.nextLaneY);
+          boss.currentLaneY = boss.nextLaneY;
+          boss.nextLaneY = null;
+          this.scheduleBossLaneChange(boss, laneYs);
+        } else {
+          const vy = Phaser.Math.Clamp(dy, -30, 30);
+          boss.setVelocityY(vy);
+        }
       }
 
-      const dx = Math.max(this.player.x - 180, 200) - boss.x;
-      const dy = boss.nextLaneY - boss.y;
-
-      const vx = Phaser.Math.Clamp(dx, -60, 60);
-      const vy = Phaser.Math.Clamp(dy, -60, 60);
-
+      const targetX = Math.max(this.player.x - 200, 180);
+      const dx = targetX - boss.x;
+      const vx = Phaser.Math.Clamp(dx, -40, 40);
       boss.setVelocityX(vx);
-      boss.setVelocityY(vy);
     });
   }
 
@@ -600,7 +652,7 @@ export default class GameScene extends Phaser.Scene {
       .setAlpha(0)
       .setStrokeStyle(6, 0xff5722);
 
-    const title = this.add.text(512, 290, 'Â¡Felicidades!', {
+    const title = this.add.text(512, 290, '¡¡Felicidades!', {
       fontFamily: 'CartoonFont',
       fontSize: 56,
       color: '#ff5722',
@@ -608,7 +660,12 @@ export default class GameScene extends Phaser.Scene {
       strokeThickness: 6
     }).setOrigin(0.5).setDepth(31).setAlpha(0);
 
-    const subtitle = this.add.text(512, 350, `Derrotaste al Gato Supremo\nPuntos: ${this.score}`, {
+    const victoryImage = this.add.image(512, 360, 'descarga')
+      .setDepth(31)
+      .setScale(0.55)
+      .setAlpha(0);
+
+    const subtitle = this.add.text(512, 430, `Derrotaste al Gato Supremo\nPuntos: ${this.score}`, {
       fontFamily: 'CartoonFont',
       fontSize: 32,
       align: 'center',
@@ -646,10 +703,11 @@ export default class GameScene extends Phaser.Scene {
     };
 
     const playAgain = makeButton(420, 'Jugar otra vez', () => this.scene.restart());
-    const backMenu = makeButton(485, 'Volver al menÃº', () => this.scene.start('MenuScene'));
+    const backMenu = makeButton(485, 'Volver al menu', () => this.scene.start('MenuScene'));
 
     this.victoryPanel = this.add.container(0, 0, [
       panelBg,
+      victoryImage,
       title,
       subtitle,
       playAgain.btnBg,
@@ -660,7 +718,7 @@ export default class GameScene extends Phaser.Scene {
     this.victoryPanel.setDepth(31);
 
     this.tweens.add({
-      targets: [panelBg, title, subtitle, playAgain.btnBg, playAgain.text, backMenu.btnBg, backMenu.text],
+      targets: [panelBg, victoryImage, title, subtitle, playAgain.btnBg, playAgain.text, backMenu.btnBg, backMenu.text],
       alpha: 1,
       duration: 350,
       delay: 200,
@@ -683,7 +741,10 @@ export default class GameScene extends Phaser.Scene {
     this.bossAttackTimers.forEach(timer => timer.destroy());
     this.bossAttackTimers = [];
 
-    this.finalBosses.forEach(boss => boss.destroy());
+    this.finalBosses.forEach(boss => {
+      boss.nextLaneTimer?.remove();
+      boss.destroy();
+    });
     this.finalBosses = [];
 
     this.clearBossUI();
@@ -692,7 +753,6 @@ export default class GameScene extends Phaser.Scene {
     this.finalBossSpawnThreshold = 10;
     this.destroyBossCountdownUI();
     this.destroyVictoryUI();
-    this.victoryShown = false;
 
     if (this.score > this.previousHighscore) {
       this.highscoreText?.setText('Record: NEW!');
