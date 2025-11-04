@@ -27,7 +27,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("overlay",         "assets/images/overlay.png");
     this.load.image("controls",        "assets/images/elementos/controls.png");
     this.load.image("gameover",        "assets/images/elementos/gameover.png");
-    this.load.image("descarga",        "assets/images/descarga_ui.png");
+    this.load.image("descarga",        "assets/images/elementos/you_win.png");
 
     // =========================
     // PERSONAJES / ENEMIGOS
@@ -76,12 +76,15 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.audio("hit",         "assets/audio/hit.wav");
     this.load.audio("enemy_kill",  "assets/audio/enemy_kill.mp3");
     this.load.audio("gameover",    "assets/audio/gameover.wav");
+    this.load.audio("victory",         "assets/audio/win.mp3");
    
     // Música
     this.load.audio("music",       "assets/audio/music.mp3");
     this.load.audio("music_menu",  "assets/audio/main_menu.mp3");
     this.load.audio("nivel1",      "assets/audio/nivel1.mp3");
     this.load.audio("nivel2",      "assets/audio/nivel2.mp3");
+    this.load.audio("nivel3",      "assets/audio/nivel3.mp3");
+
 
     // UI
     this.load.image("btnBlue", "assets/images/button_rectangle_depth_border.svg");
@@ -106,23 +109,26 @@ export default class PreloadScene extends Phaser.Scene {
       g2.destroy();
     }
 
-    if (!this.anims.exists('final_boss_idle')) {
-      this.anims.create({
-        key: 'final_boss_idle',
-        frames: [{ key: 'final_boss' }],
-        frameRate: 1,
-        repeat: -1
-      });
-    }
+     this.anims.create({
+      key: 'final_boss_idle',
+      frames: this.anims.generateFrameNumbers('final_boss', { start: 0, end: 1 }),
+      frameRate: 4,
+      repeat: -1
+    });
 
-    if (!this.anims.exists('final_boss_attack')) {
-      this.anims.create({
-        key: 'final_boss_attack',
-        frames: [{ key: 'final_boss' }],
-        frameRate: 1,
-        repeat: 0
-      });
-    }
+    this.anims.create({
+      key: 'final_boss_taunt',
+      frames: this.anims.generateFrameNumbers('final_boss', { start: 2, end: 3 }),
+      frameRate: 6,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'final_boss_attack',
+      frames: this.anims.generateFrameNumbers('final_boss', { start: 4, end: 5 }),
+      frameRate: 8,
+      repeat: 0
+    });
 
     if (!this.anims.exists('final_boss_taunt')) {
       this.anims.create({

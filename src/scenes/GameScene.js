@@ -37,8 +37,9 @@ export default class GameScene extends Phaser.Scene {
     this.bossAttackTimers = [];
     this.victoryOverlay = null;
     this.victoryPanel = null;
+    this.winSoundPlayed = false;
 
-    this.bossMaxHealth = 150;
+    this.bossMaxHealth = 300; // Por ejemplo, para hacerlo más difícil
     this.totalFinalBosses = 1;
     this.finalBossSpawned = false;
     this.level3SmallSpawnCount = 0;
@@ -46,6 +47,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossCountdownText = null;
     this.victoryShown = false;
   }
+
 
   create() {
     this.score = 0;
@@ -69,6 +71,10 @@ export default class GameScene extends Phaser.Scene {
     this.level3SmallSpawnCount = 0;
     this.finalBossSpawnThreshold = 10;
     this.destroyVictoryUI();
+
+    // ✅ Reiniciar el flag del sonido de victoria aquí
+    this.winSoundPlayed = false;
+
     this.destroyBossCountdownUI();
 
     // Música de nivel 1
@@ -134,8 +140,8 @@ export default class GameScene extends Phaser.Scene {
       this.registry.set('highscore', this.highscore);
     }
 
-    if (!this.level2Reached && this.score >= 150) this.reachSecondLevel();
-    if (!this.level3Reached && this.score >= 300) this.reachThirdLevel();
+    if (!this.level2Reached && this.score >= 5) this.reachSecondLevel();
+    if (!this.level3Reached && this.score >= 10) this.reachThirdLevel();
   }
 
   adjustDifficulty({ spawnMin, spawnMax, timeScale, enemySpeedSmall, enemySpeedBig }) {
@@ -205,16 +211,20 @@ export default class GameScene extends Phaser.Scene {
     this.level2Music?.stop();
     try {
       if (this.cache.audio?.exists('nivel3')) {
-        if (!this.level3Music) this.level3Music = this.sound.add('nivel3', { loop: true, volume: 0.45 });
+        if (!this.level3Music) this.level3Music = this.sound.add('nivel3', { loop: true, volume: 0.9 });
         this.level3Music.play();
       }
     } catch (e) {}
 
     this.backgroundImage?.setTexture('nivel3');
 
-    this.tracks.forEach(track => {
-      track.stop();
-      track.start(1200, 2600);
+    // ✅ Usar adjustDifficulty para aumentar velocidad y frecuencia
+    this.adjustDifficulty({
+      spawnMin: 800,    // Más frecuente que el nivel 2 (1500)
+      spawnMax: 2000,   // Más frecuente que el nivel 2 (3000)
+      timeScale: 1.25,  // Acelerar un poco el juego en general
+      enemySpeedSmall: 160, // Más rápido que el nivel 2 (120)
+      enemySpeedBig: 130    // Más rápido que el nivel 2 (100)
     });
 
     this.levelMessage?.destroy();
@@ -322,7 +332,7 @@ export default class GameScene extends Phaser.Scene {
       boss.currentLaneY = this.closestLaneY(boss.y, laneYs);
       boss.nextLaneY = null;
       boss.nextLaneTimer = null;
-      boss.play?.('final_boss_idle');
+      boss.play('final_boss_idle');
 
       this.allEnemies.add(boss);
       this.finalBosses.push(boss);
@@ -375,12 +385,46 @@ export default class GameScene extends Phaser.Scene {
   startBossAttackLoop(boss) {
     const timer = this.time.addEvent({
       delay: Phaser.Math.Between(2000, 3200),
-      callback: () => this.bossAttack(boss),
+      callback: () => this.chooseBossAttack(boss), // ✅ Elegir qué ataque usar
       loop: true
     });
 
     this.bossAttackTimers.push(timer);
     boss.attackTimer = timer;
+  }
+
+  // ✅ NUEVO: Elige aleatoriamente entre el ataque normal y el especial
+  chooseBossAttack(boss) {
+    if (!boss || !boss.isAlive) return;
+
+    const chance = Phaser.Math.Between(0, 100);
+
+    if (chance < 30) { // 30% de probabilidad de usar el ataque de área
+      this.bossLaneAttack(boss);
+    } else { // 70% de probabilidad de usar el ataque normal
+      this.bossAttack(boss);
+    }
+  }
+
+  // ✅ NUEVO: Ataque especial que dispara en los 4 carriles
+  bossLaneAttack(boss) {
+    if (!boss || !boss.isAlive || !this.player?.isAlive) return;
+
+    // Animación de "aviso" para que el jugador pueda reaccionar
+    boss.play?.('final_boss_taunt');
+
+    // Tras la animación, lanzar los proyectiles
+    this.time.delayedCall(400, () => {
+      if (!boss?.isAlive) return;
+
+      boss.play?.('final_boss_idle'); // Volver a la animación normal
+
+      this.tracks.forEach(track => {
+        const projectile = new EnemyShoot(this, boss.x, track.y, 'projectileEnemy');
+        this.allEnemyProjectiles.add(projectile);
+        projectile.fire(boss.x, track.y, 600); // Usamos una velocidad ligeramente menor para este ataque
+      });
+    });
   }
 
   closestLaneY(value, laneYs) {
@@ -439,19 +483,29 @@ export default class GameScene extends Phaser.Scene {
       }
     });
 
-    if (this.player && this.player.isAlive) {
-      const projectile = new EnemyShoot(this, boss.x + 40, boss.y, 'projectileEnemy');
-      this.add.existing(projectile);
-      this.physics.add.existing(projectile);
-      this.allEnemyProjectiles.add(projectile);
-      projectile.body.reset(boss.x + 40, boss.y - 44);
-      projectile.setActive(true);
-      projectile.setVisible(true);
-      projectile.setVelocityX(240);
-      projectile.setVelocityY(0);
-      projectile.setAccelerationX(0);
+    // ✅ Disparar una ráfaga de proyectiles más rápidos
+    if (this.player?.isAlive) {
+      const projectileCount = 3; // Número de proyectiles en la ráfaga
+      const projectileDelay = 120; // Milisegundos entre cada proyectil
+      const projectileSpeed = 750; // Más rápido que los enemigos normales (que tienen 500)
+
+      for (let i = 0; i < projectileCount; i++) {
+        this.time.delayedCall(i * projectileDelay, () => {
+          // Asegurarse de que el jefe y el jugador sigan vivos al disparar
+          if (!boss?.isAlive || !this.player?.isAlive) return;
+
+          const projectile = new EnemyShoot(this, boss.x, boss.y, 'projectileEnemy');
+          this.allEnemyProjectiles.add(projectile);
+
+          // Usar el método .fire() para consistencia y establecer velocidad
+          projectile.fire(boss.x, boss.y);
+          projectile.setVelocityX(projectileSpeed); // Sobrescribir la velocidad por defecto
+          projectile.setAccelerationX(0); // El jefe dispara balas rápidas y constantes
+        });
+      }
     }
   }
+
 hitEnemy(projectile, enemy) {
   if (!enemy.isAlive || !projectile.active) return;
 
@@ -538,7 +592,19 @@ hitEnemy(projectile, enemy) {
           // ✅ Si ya no quedan jefes, muestra la pantalla de victoria
           if (this.finalBosses.length === 0) {
             console.log('🎉 Jefe final derrotado — mostrando pantalla de victoria');
+ 
+            // Detener la música de fondo actual
+            if (this.level3Music?.isPlaying) this.level3Music.stop();
+            if (this.level2Music?.isPlaying) this.level2Music.stop();
+            if (this.level1Music?.isPlaying) this.level1Music.stop();
+ 
+            // Reproducir sonido de victoria una sola vez y sin interrupciones
+            if (this.cache.audio.exists('victory') && !this.winSoundPlayed) {
+              this.winSoundPlayed = this.sound.add('victory', { volume: 1.2 });
+              this.winSoundPlayed.play();
+            }
             this.time.delayedCall(600, () => this.showVictoryPanel());
+
           }
         }
       });
@@ -634,10 +700,6 @@ hitEnemy(projectile, enemy) {
 
   this.destroyVictoryUI();
   this.destroyBossCountdownUI();
-
-  // Detener música
-  this.sound.stopAll();
-  this.sound.play('enemy_kill', { volume: 1.2 });
 
   // Fondo de victoria (ENCIMA DE TODO)
   const victoryBg = this.add.image(

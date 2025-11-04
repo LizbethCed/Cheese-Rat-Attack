@@ -176,11 +176,15 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     );
   }
 
-  throw() {
+ throw() {
+    // ✅ Verificar que esté vivo ANTES de disparar
+    if (!this.isAlive) return;
+    
     this.previousAction = 2;
     this.isThrowing = true;
 
-    this.scene.time.delayedCall(200, () => {
+    // ✅ Guardar referencia al timer para poder cancelarlo
+    this.throwTimer = this.scene.time.delayedCall(200, () => {
       this.releaseSnowball();
     });
   }
@@ -190,7 +194,8 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.currentTrack.throwEnemySnowball(this.x);
 
-    this.scene.time.delayedCall(200, () => {
+    // ✅ Guardar referencia al timer
+    this.throwCompleteTimer = this.scene.time.delayedCall(200, () => {
       this.throwComplete();
     });
   }
@@ -207,7 +212,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
       this
     );
   }
-
+  
   // ✅ MÉTODO HIT CON ANIMACIÓN DE SPRITESHEET
   hit() {
     if (!this.isAlive) return;
