@@ -766,45 +766,152 @@ hitEnemy(projectile, enemy) {
   }
 
   gameOver() {
-    this.infoPanel.setTexture('gameover');
-    this.infoPanel.setScale(0.5);
-    this.tweens.add({ targets: this.infoPanel, y: 384, alpha: 1, duration: 500, ease: 'Power2' });
+  // Detiene todo
+  this.tracks.forEach(track => track.stop());
+  this.sound.stopAll();
+  this.sound.play('gameover', { volume: 1 });
 
-    this.tracks.forEach(track => track.stop());
-    this.sound.stopAll();
-    this.sound.play('gameover', { volume: 1 });
+  this.player.stop();
+  if (this.scoreTimer) this.scoreTimer.destroy();
 
-    this.player.stop();
-    if (this.scoreTimer) this.scoreTimer.destroy();
+  this.bossAttackTimers.forEach(timer => timer.destroy());
+  this.bossAttackTimers = [];
 
-    this.bossAttackTimers.forEach(timer => timer.destroy());
-    this.bossAttackTimers = [];
+  this.finalBosses.forEach(boss => {
+    boss.nextLaneTimer?.remove();
+    boss.destroy();
+  });
+  this.finalBosses = [];
 
-    this.finalBosses.forEach(boss => {
-      boss.nextLaneTimer?.remove();
-      boss.destroy();
-    });
-    this.finalBosses = [];
+  this.clearBossUI();
+  this.finalBossSpawned = false;
+  this.level3SmallSpawnCount = 0;
+  this.finalBossSpawnThreshold = 10;
+  this.destroyBossCountdownUI();
+  this.destroyVictoryUI();
 
-    this.clearBossUI();
-    this.finalBossSpawned = false;
-    this.level3SmallSpawnCount = 0;
-    this.finalBossSpawnThreshold = 10;
-    this.destroyBossCountdownUI();
-    this.destroyVictoryUI();
-
-    if (this.score > this.previousHighscore) {
-      this.highscoreText?.setText('Record: NEW!');
-      this.registry.set('highscore', this.score);
-    } else {
-      this.highscoreText?.setText(`Record: ${this.highscore}`);
-    }
-
-    if (!this.victoryShown) {
-      this.input.keyboard.once('keydown-SPACE', () => this.scene.start('MenuScene'), this);
-      this.input.once('pointerdown', () => this.scene.start('MenuScene'), this);
-    }
+  // Actualiza récord
+  if (this.score > this.previousHighscore) {
+    this.highscoreText?.setText('Record: NEW!');
+    this.registry.set('highscore', this.score);
+  } else {
+    this.highscoreText?.setText(`Record: ${this.highscore}`);
   }
+
+  // --- NUEVO GAME OVER VISUAL ---
+  const goBg = this.add.image(
+    this.cameras.main.centerX,
+    this.cameras.main.centerY,
+    'gameover_img'
+  )
+    .setOrigin(0.5)
+    .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
+    .setDepth(1000)
+    .setAlpha(0);
+
+  // Texto superior
+  const title = this.add.text(this.cameras.main.centerX, 220, '¡Game Over!', {
+    fontFamily: 'CartoonFont',
+    fontSize: 72,
+    color: '#ffffff',
+    stroke: '#000',
+    strokeThickness: 8,
+  })
+    .setOrigin(0.5)
+    .setDepth(1001)
+    .setAlpha(0);
+
+  const subtitle = this.add.text(
+    this.cameras.main.centerX,
+    320,
+    `Tu puntuación: ${this.score}`,
+    {
+      fontFamily: 'CartoonFont',
+      fontSize: 38,
+      align: 'center',
+      color: '#fff',
+      stroke: '#000',
+      strokeThickness: 6,
+    }
+  )
+    .setOrigin(0.5)
+    .setDepth(1001)
+    .setAlpha(0);
+
+  const buttonStyle = {
+    fontFamily: 'CartoonFont',
+    fontSize: 34,
+    color: '#ffffff',
+    stroke: '#000',
+    strokeThickness: 6,
+  };
+
+  const makeButton = (y, label, color, callback) => {
+    const btnBg = this.add.rectangle(
+      this.cameras.main.centerX,
+      y,
+      300,
+      70,
+      color
+    )
+      .setDepth(1001)
+      .setAlpha(0)
+      .setStrokeStyle(4, 0x000000);
+
+    const text = this.add.text(this.cameras.main.centerX, y, label, buttonStyle)
+      .setOrigin(0.5)
+      .setDepth(1002)
+      .setAlpha(0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', callback)
+      .on('pointerover', () => btnBg.setFillStyle(0xffa94d, 1))
+      .on('pointerout', () => btnBg.setFillStyle(color, 1));
+
+    return [btnBg, text];
+  };
+
+  const [btnReplayBg, btnReplayText] = makeButton(
+    this.cameras.main.centerY + 80,
+    'Volver a jugar',
+    0x00bcd4,
+    () => this.scene.restart()
+  );
+
+  const [btnMenuBg, btnMenuText] = makeButton(
+    this.cameras.main.centerY + 170,
+    'Menú principal',
+    0xff7043,
+    () => this.scene.start('MenuScene')
+  );
+
+  // Contenedor completo
+  this.gameOverPanel = this.add.container(0, 0, [
+    goBg,
+    title,
+    subtitle,
+    btnReplayBg,
+    btnReplayText,
+    btnMenuBg,
+    btnMenuText,
+  ]);
+  this.gameOverPanel.setDepth(1002);
+
+  // Animación de aparición
+  this.tweens.add({
+    targets: [
+      goBg,
+      title,
+      subtitle,
+      btnReplayBg,
+      btnReplayText,
+      btnMenuBg,
+      btnMenuText,
+    ],
+    alpha: 1,
+    duration: 800,
+    ease: 'Power2',
+  });
+}
 
   clearBossUI() {
     this.bossHealthBars.forEach(bar => bar.destroy());
