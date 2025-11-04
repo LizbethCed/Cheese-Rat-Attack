@@ -34,7 +34,6 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("mouse",                 "assets/sprites/player.png");
     this.load.image("snowman-small-idle0",   "assets/sprites/small_cat.png");
     this.load.image("snowman-big-throw",     "assets/sprites/big_cat.png");
-    this.load.image("final_boss",            "assets/sprites/final_boss.png");
 
     // =========================
     // JEFE FINAL - 6 FRAMES HORIZONTALES

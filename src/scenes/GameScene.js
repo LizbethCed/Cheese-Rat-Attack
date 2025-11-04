@@ -36,8 +36,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossHealthTexts = [];
     this.bossAttackTimers = [];
     this.victoryOverlay = null;
-    this.victoryMessage = null;
-    this.victoryButtons = null;
+    this.victoryPanel = null;
 
     this.bossMaxHealth = 50;
     this.totalFinalBosses = 1;
@@ -580,8 +579,10 @@ export default class GameScene extends Phaser.Scene {
     if (this.victoryShown) return;
     this.victoryShown = true;
 
-    this.victoryOverlay?.destroy();
-    this.victoryOverlay = this.add.rectangle(512, 384, this.scale.width, this.scale.height, 0x000000, 0.85)
+    this.destroyVictoryUI();
+    this.destroyBossCountdownUI();
+
+    this.victoryOverlay = this.add.rectangle(512, 384, this.scale.width, this.scale.height, 0x000000, 0.78)
       .setDepth(29)
       .setAlpha(0);
 
@@ -590,55 +591,81 @@ export default class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.victoryOverlay,
       alpha: 1,
-      duration: 400,
-      ease: 'Power1'
+      duration: 350,
+      ease: 'Power2'
     });
 
-    this.victoryMessage?.destroy();
-    this.victoryMessage = this.add.text(512, 320, '¡Felicidades!\nDerrotaste al Gato Supremo', {
+    const panelBg = this.add.rectangle(512, 360, 540, 260, 0xffffff, 0.92)
+      .setDepth(30)
+      .setAlpha(0)
+      .setStrokeStyle(6, 0xff5722);
+
+    const title = this.add.text(512, 290, '¡Felicidades!', {
       fontFamily: 'CartoonFont',
-      fontSize: 48,
-      align: 'center',
-      color: '#fff',
+      fontSize: 56,
+      color: '#ff5722',
       stroke: '#000',
       strokeThickness: 6
-    }).setOrigin(0.5).setDepth(31);
+    }).setOrigin(0.5).setDepth(31).setAlpha(0);
 
-    this.time.delayedCall(3000, () => {
-      this.victoryMessage?.destroy();
-      this.victoryMessage = null;
-      this.showVictoryPanelOptions();
-    });
-  }
-
-  showVictoryPanelOptions() {
-    if (!this.victoryShown) return;
-
-    this.victoryButtons?.destroy();
-    const buttonConfig = {
+    const subtitle = this.add.text(512, 350, `Derrotaste al Gato Supremo\nPuntos: ${this.score}`, {
       fontFamily: 'CartoonFont',
       fontSize: 32,
+      align: 'center',
+      color: '#222222'
+    }).setOrigin(0.5).setDepth(31).setAlpha(0);
+
+    const buttonStyle = {
+      fontFamily: 'CartoonFont',
+      fontSize: 30,
       color: '#ffffff',
-      backgroundColor: '#ff5722',
-      padding: { x: 20, y: 10 },
       stroke: '#000',
       strokeThickness: 4
     };
 
-    const playAgain = this.add.text(512, 420, 'Jugar otra vez', buttonConfig)
-      .setOrigin(0.5)
-      .setDepth(31)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => this.scene.restart());
+    const makeButton = (y, label, callback) => {
+      const btnBg = this.add.rectangle(512, y, 280, 56, 0xff7043, 1)
+        .setDepth(30)
+        .setAlpha(0)
+        .setStrokeStyle(4, 0x000000);
 
-    const menuButton = this.add.text(512, 480, 'Volver al menú', buttonConfig)
-      .setOrigin(0.5)
-      .setDepth(31)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => this.scene.start('MenuScene'));
+      const text = this.add.text(512, y, label, buttonStyle)
+        .setOrigin(0.5)
+        .setDepth(31)
+        .setAlpha(0)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', callback)
+        .on('pointerover', () => {
+          btnBg.setFillStyle(0xff8f5e, 1);
+        })
+        .on('pointerout', () => {
+          btnBg.setFillStyle(0xff7043, 1);
+        });
 
-    this.victoryButtons = this.add.container(0, 0, [playAgain, menuButton]);
-    this.victoryButtons.setDepth(31);
+      return { btnBg, text };
+    };
+
+    const playAgain = makeButton(420, 'Jugar otra vez', () => this.scene.restart());
+    const backMenu = makeButton(485, 'Volver al menú', () => this.scene.start('MenuScene'));
+
+    this.victoryPanel = this.add.container(0, 0, [
+      panelBg,
+      title,
+      subtitle,
+      playAgain.btnBg,
+      playAgain.text,
+      backMenu.btnBg,
+      backMenu.text
+    ]);
+    this.victoryPanel.setDepth(31);
+
+    this.tweens.add({
+      targets: [panelBg, title, subtitle, playAgain.btnBg, playAgain.text, backMenu.btnBg, backMenu.text],
+      alpha: 1,
+      duration: 350,
+      delay: 200,
+      ease: 'Power2'
+    });
   }
 
   gameOver() {
@@ -692,12 +719,10 @@ export default class GameScene extends Phaser.Scene {
   destroyVictoryUI() {
     this.victoryOverlay?.destroy();
     this.victoryOverlay = null;
-    this.victoryMessage?.destroy();
-    this.victoryMessage = null;
-    if (this.victoryButtons) {
-      this.victoryButtons.removeAll(true);
-      this.victoryButtons.destroy();
-      this.victoryButtons = null;
+    if (this.victoryPanel) {
+      this.victoryPanel.removeAll(true);
+      this.victoryPanel.destroy();
+      this.victoryPanel = null;
     }
     this.victoryShown = false;
   }
