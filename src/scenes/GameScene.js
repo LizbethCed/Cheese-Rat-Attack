@@ -1,4 +1,4 @@
-import Track from '../util/Track.js';
+﻿import Track from '../util/Track.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
 import PlayerShoot from '../entities/PlayerShoot.js';
@@ -107,10 +107,7 @@ export default class GameScene extends Phaser.Scene {
     this.add.text(720, 2, 'Puntos:', { fontFamily: 'CartoonFont', fontSize: 32, color: '#ffffff' });
     this.scoreText = this.add.text(840, 2, this.score, { fontFamily: 'CartoonFont', fontSize: 32, color: '#ffffff' }).setDepth(10);
     this.highscoreText = this.add.text(720, 42, `Record: ${this.highscore}`, { fontFamily: 'CartoonFont', fontSize: 32, color: '#ffffff' }).setDepth(10);
-    this.descargaBadge = this.add.image(980, 70, 'descarga')
-      .setOrigin(1, 0.5)
-      .setScale(0.3)
-      .setDepth(9);
+    
 
     // Colisiones
     this.physics.add.overlap(this.allPlayerProjectiles, this.allEnemies, this.hitEnemy, this.checkCollision, this);
@@ -123,7 +120,6 @@ export default class GameScene extends Phaser.Scene {
     this.input.keyboard.once('keydown-SPACE', this.start, this);
     this.input.keyboard.once('keydown-UP', this.start, this);
     this.input.keyboard.once('keydown-DOWN', this.start, this);
-
     this.input.keyboard.once('keydown-ESC', () => this.scene.start('MenuScene'));
   }
 
@@ -456,110 +452,115 @@ export default class GameScene extends Phaser.Scene {
       projectile.setAccelerationX(0);
     }
   }
+hitEnemy(projectile, enemy) {
+  if (!enemy.isAlive || !projectile.active) return;
 
-  hitEnemy(projectile, enemy) {
-    if (!enemy.isAlive || !projectile.active) return;
+  projectile.destroy();
 
-    projectile.destroy();
+  if (enemy.isBoss) {
+    enemy.health = Math.max(0, enemy.health - 30);
+    this.sound.play('hit', { volume: 0.7 });
 
-    if (enemy.isBoss) {
-      enemy.health = Math.max(0, enemy.health - 30);
-      this.sound.play('hit', { volume: 0.7 });
+    enemy.play?.('final_boss_taunt', true);
 
-      enemy.play?.('final_boss_taunt', true);
+    this.time.delayedCall(400, () => {
+      if (enemy && enemy.isAlive) {
+        enemy.play?.('final_boss_idle');
+      }
+    });
 
-      this.time.delayedCall(400, () => {
-        if (enemy && enemy.isAlive) {
-          enemy.play?.('final_boss_idle');
-        }
-      });
+    this.tweens.add({
+      targets: enemy,
+      alpha: 0.3,
+      duration: 80,
+      yoyo: true,
+      repeat: 3,
+      onStart: () => { enemy.setTint(0xff0000); },
+      onComplete: () => {
+        enemy.clearTint();
+        enemy.alpha = 1;
+      }
+    });
 
+    const percentage = Math.max(0, enemy.health / enemy.maxHealth);
+    if (enemy.healthBar) {
+      enemy.healthBar.clear();
+      enemy.healthBar.fillStyle(0xff1e56, 1);
+      enemy.healthBar.fillRect(
+        enemy.healthBarX - enemy.healthBarWidth / 2,
+        enemy.healthBarY - enemy.healthBarHeight / 2,
+        enemy.healthBarWidth * percentage,
+        enemy.healthBarHeight
+      );
+    }
+    enemy.healthText?.setText(`Vida: ${Math.max(0, enemy.health)}/${enemy.maxHealth}`);
+
+    if (enemy.health <= 0) {
+      enemy.isAlive = false;
+      this.sound.play('enemy_kill', { volume: 1.5 });
+
+      // === Limpieza de timers y destrucción ===
+      if (enemy.attackTimer) {
+        enemy.attackTimer.destroy();
+        Phaser.Utils.Array.Remove(this.bossAttackTimers, enemy.attackTimer);
+        enemy.attackTimer = null;
+      }
+      if (enemy.nextLaneTimer) {
+        enemy.nextLaneTimer.remove();
+        enemy.nextLaneTimer = null;
+      }
+
+      enemy.play?.('final_boss_attack');
       this.tweens.add({
         targets: enemy,
-        alpha: 0.3,
-        duration: 80,
-        yoyo: true,
-        repeat: 3,
-        onStart: () => { enemy.setTint(0xff0000); },
+        alpha: 0,
+        scale: 1.5,
+        duration: 500,
+        ease: 'Power2',
         onComplete: () => {
-          enemy.clearTint();
-          enemy.alpha = 1;
+          enemy.destroy();
+          if (enemy.healthBar) {
+            enemy.healthBar.destroy();
+            Phaser.Utils.Array.Remove(this.bossHealthBars, enemy.healthBar);
+          }
+          if (enemy.healthBarBg) {
+            enemy.healthBarBg.destroy();
+            Phaser.Utils.Array.Remove(this.bossHealthBarBgs, enemy.healthBarBg);
+          }
+          if (enemy.healthText) {
+            enemy.healthText.destroy();
+            Phaser.Utils.Array.Remove(this.bossHealthTexts, enemy.healthText);
+          }
+
+          // 🧩 Asegura que se elimine de la lista de bosses
+          Phaser.Utils.Array.Remove(this.finalBosses, enemy);
+
+          // ✅ Si ya no quedan jefes, muestra la pantalla de victoria
+          if (this.finalBosses.length === 0) {
+            console.log('🎉 Jefe final derrotado — mostrando pantalla de victoria');
+            this.time.delayedCall(600, () => this.showVictoryPanel());
+          }
         }
       });
 
-      const percentage = Math.max(0, enemy.health / enemy.maxHealth);
-      if (enemy.healthBar) {
-        enemy.healthBar.clear();
-        enemy.healthBar.fillStyle(0xff1e56, 1);
-        enemy.healthBar.fillRect(
-          enemy.healthBarX - enemy.healthBarWidth / 2,
-          enemy.healthBarY - enemy.healthBarHeight / 2,
-          enemy.healthBarWidth * percentage,
-          enemy.healthBarHeight
-        );
-      }
-      enemy.healthText?.setText(`Vida: ${Math.max(0, enemy.health)}/${enemy.maxHealth}`);
-
-      if (enemy.health <= 0) {
-        enemy.isAlive = false;
-        this.sound.play('enemy_kill', { volume: 1.5 });
-
-        if (enemy.attackTimer) {
-          enemy.attackTimer.destroy();
-          Phaser.Utils.Array.Remove(this.bossAttackTimers, enemy.attackTimer);
-          enemy.attackTimer = null;
-        }
-        if (enemy.nextLaneTimer) {
-          enemy.nextLaneTimer.remove();
-          enemy.nextLaneTimer = null;
-        }
-
-        enemy.play?.('final_boss_attack');
-        this.tweens.add({
-          targets: enemy,
-          alpha: 0,
-          scale: 1.5,
-          duration: 500,
-          ease: 'Power2',
-          onComplete: () => {
-            enemy.destroy();
-            if (enemy.healthBar) {
-              enemy.healthBar.destroy();
-              Phaser.Utils.Array.Remove(this.bossHealthBars, enemy.healthBar);
-            }
-            if (enemy.healthBarBg) {
-              enemy.healthBarBg.destroy();
-              Phaser.Utils.Array.Remove(this.bossHealthBarBgs, enemy.healthBarBg);
-            }
-            if (enemy.healthText) {
-              enemy.healthText.destroy();
-              Phaser.Utils.Array.Remove(this.bossHealthTexts, enemy.healthText);
-            }
-            Phaser.Utils.Array.Remove(this.finalBosses, enemy);
-          }
-        });
-
-        this.addScore(500);
-
-        if (this.finalBosses.length === 0) {
-          this.time.delayedCall(400, () => this.showVictoryPanel());
-        }
-      }
-      return;
+      this.addScore(500);
     }
-
-    const points = enemy.size === 'Small' ? 5 : 10;
-    this.addScore(points);
-    this.sound.play('enemy_kill', { volume: 0.5 });
-    enemy.hit();
-
-    if (this.anims.exists('snow_explode')) {
-      const explosion = this.add.sprite(enemy.x, enemy.y - 30, 'snow_explosion');
-      explosion.setScale(0.4);
-      explosion.play('snow_explode');
-      explosion.on('animationcomplete', () => explosion.destroy());
-    }
+    return;
   }
+
+  // Enemigos normales
+  const points = enemy.size === 'Small' ? 5 : 10;
+  this.addScore(points);
+  this.sound.play('enemy_kill', { volume: 0.5 });
+  enemy.hit();
+
+  if (this.anims.exists('snow_explode')) {
+    const explosion = this.add.sprite(enemy.x, enemy.y - 30, 'snow_explosion');
+    explosion.setScale(0.4);
+    explosion.play('snow_explode');
+    explosion.on('animationcomplete', () => explosion.destroy());
+  }
+}
 
   start() {
     this.input.keyboard.removeAllListeners();
@@ -627,103 +628,141 @@ export default class GameScene extends Phaser.Scene {
     this.gameOver();
   }
 
-  showVictoryPanel() {
-    if (this.victoryShown) return;
-    this.victoryShown = true;
+ showVictoryPanel() {
+  if (this.victoryShown) return;
+  this.victoryShown = true;
 
-    this.destroyVictoryUI();
-    this.destroyBossCountdownUI();
+  this.destroyVictoryUI();
+  this.destroyBossCountdownUI();
 
-    this.victoryOverlay = this.add.rectangle(512, 384, this.scale.width, this.scale.height, 0x000000, 0.78)
-      .setDepth(29)
-      .setAlpha(0);
+  // Detener música
+  this.sound.stopAll();
+  this.sound.play('enemy_kill', { volume: 1.2 });
 
-    this.sound.play('enemy_kill', { volume: 1.2 });
+  // Fondo de victoria (ENCIMA DE TODO)
+  const victoryBg = this.add.image(
+    this.cameras.main.centerX,
+    this.cameras.main.centerY,
+    'descarga'
+  )
+    .setOrigin(0.5)
+    .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
+    .setDepth(999)
+    .setAlpha(0);
 
-    this.tweens.add({
-      targets: this.victoryOverlay,
-      alpha: 1,
-      duration: 350,
-      ease: 'Power2'
-    });
+  // Texto de felicitación
+  const title = this.add.text(this.cameras.main.centerX, 220, '¡Felicidades!', {
+    fontFamily: 'CartoonFont',
+    fontSize: 72,
+    color: '#ffffff',
+    stroke: '#000',
+    strokeThickness: 8,
+  })
+    .setOrigin(0.5)
+    .setDepth(1000)
+    .setAlpha(0);
 
-    const panelBg = this.add.rectangle(512, 360, 540, 260, 0xffffff, 0.92)
-      .setDepth(30)
-      .setAlpha(0)
-      .setStrokeStyle(6, 0xff5722);
-
-    const title = this.add.text(512, 290, '��Felicidades!', {
+  // Subtítulo
+  const subtitle = this.add.text(
+    this.cameras.main.centerX,
+    320,
+    `Derrotaste al Gato Supremo\nPuntos: ${this.score}`,
+    {
       fontFamily: 'CartoonFont',
-      fontSize: 56,
-      color: '#ff5722',
-      stroke: '#000',
-      strokeThickness: 6
-    }).setOrigin(0.5).setDepth(31).setAlpha(0);
-
-    const victoryImage = this.add.image(512, 360, 'descarga')
-      .setDepth(31)
-      .setScale(0.55)
-      .setAlpha(0);
-
-    const subtitle = this.add.text(512, 430, `Derrotaste al Gato Supremo\nPuntos: ${this.score}`, {
-      fontFamily: 'CartoonFont',
-      fontSize: 32,
+      fontSize: 38,
       align: 'center',
-      color: '#222222'
-    }).setOrigin(0.5).setDepth(31).setAlpha(0);
-
-    const buttonStyle = {
-      fontFamily: 'CartoonFont',
-      fontSize: 30,
-      color: '#ffffff',
+      color: '#fff',
       stroke: '#000',
-      strokeThickness: 4
-    };
+      strokeThickness: 6,
+    }
+  )
+    .setOrigin(0.5)
+    .setDepth(1000)
+    .setAlpha(0);
 
-    const makeButton = (y, label, callback) => {
-      const btnBg = this.add.rectangle(512, y, 280, 56, 0xff7043, 1)
-        .setDepth(30)
-        .setAlpha(0)
-        .setStrokeStyle(4, 0x000000);
+  const buttonStyle = {
+    fontFamily: 'CartoonFont',
+    fontSize: 34,
+    color: '#ffffff',
+    stroke: '#000',
+    strokeThickness: 6,
+  };
 
-      const text = this.add.text(512, y, label, buttonStyle)
-        .setOrigin(0.5)
-        .setDepth(31)
-        .setAlpha(0)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', callback)
-        .on('pointerover', () => {
-          btnBg.setFillStyle(0xff8f5e, 1);
-        })
-        .on('pointerout', () => {
-          btnBg.setFillStyle(0xff7043, 1);
-        });
+  const makeButton = (y, label, color, callback) => {
+    const btnBg = this.add.rectangle(
+      this.cameras.main.centerX,
+      y,
+      300,
+      70,
+      color
+    )
+      .setDepth(1000)
+      .setAlpha(0)
+      .setStrokeStyle(4, 0x000000);
 
-      return { btnBg, text };
-    };
+    const text = this.add.text(this.cameras.main.centerX, y, label, buttonStyle)
+      .setOrigin(0.5)
+      .setDepth(1001)
+      .setAlpha(0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', callback)
+      .on('pointerover', () => btnBg.setFillStyle(0xffa94d, 1))
+      .on('pointerout', () => btnBg.setFillStyle(color, 1));
 
-    const playAgain = makeButton(420, 'Jugar otra vez', () => this.scene.restart());
-    const backMenu = makeButton(485, 'Volver al menu', () => this.scene.start('MenuScene'));
+    return [btnBg, text];
+  };
 
-    this.victoryPanel = this.add.container(0, 0, [
-      panelBg,
-      victoryImage,
+  const [btnReplayBg, btnReplayText] = makeButton(
+    this.cameras.main.centerY + 80,
+    'Volver a jugar',
+    0x00bcd4,
+    () => this.scene.restart()
+  );
+  const [btnMenuBg, btnMenuText] = makeButton(
+    this.cameras.main.centerY + 170,
+    'Menú principal',
+    0xff7043,
+    () => this.scene.start('MenuScene')
+  );
+
+  this.victoryPanel = this.add.container(0, 0, [
+    victoryBg,
+    title,
+    subtitle,
+    btnReplayBg,
+    btnReplayText,
+    btnMenuBg,
+    btnMenuText,
+  ]);
+  this.victoryPanel.setDepth(1002);
+
+  // Animación de aparición
+  this.tweens.add({
+    targets: [
+      victoryBg,
       title,
       subtitle,
-      playAgain.btnBg,
-      playAgain.text,
-      backMenu.btnBg,
-      backMenu.text
-    ]);
-    this.victoryPanel.setDepth(31);
+      btnReplayBg,
+      btnReplayText,
+      btnMenuBg,
+      btnMenuText,
+    ],
+    alpha: 1,
+    duration: 800,
+    ease: 'Power2',
+  });
+}
 
-    this.tweens.add({
-      targets: [panelBg, victoryImage, title, subtitle, playAgain.btnBg, playAgain.text, backMenu.btnBg, backMenu.text],
-      alpha: 1,
-      duration: 350,
-      delay: 200,
-      ease: 'Power2'
-    });
+
+  destroyVictoryUI() {
+    this.victoryOverlay?.destroy();
+    this.victoryOverlay = null;
+    if (this.victoryPanel) {
+      this.victoryPanel.removeAll(true);
+      this.victoryPanel.destroy();
+      this.victoryPanel = null;
+    }
+    this.victoryShown = false;
   }
 
   gameOver() {
