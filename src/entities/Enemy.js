@@ -32,6 +32,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.isThrowing = false;
     this.size = size;
     this.speed = 80; // Aumenta este valor para que avancen más rápido (ej: 80)
+    this.isBoss = false;
 
     // ✅ AÑADIR SISTEMA DE VIDA
     this.maxHealth = (this.size === 'Big') ? 2 : 1;
@@ -108,6 +109,10 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     // Velocidad hacia la DERECHA (positiva)
     this.setVelocityX(this.speed);
+
+    if (this.scene && typeof this.scene.onEnemySpawn === 'function') {
+      this.scene.onEnemySpawn(this);
+    }
 
     // Timer para elegir siguiente acción
     this.chooseEvent = this.time.delayedCall(
@@ -270,7 +275,13 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.isAlive = false;
-    this.setVelocityX(0);
+
+    if (this.body) {
+      this.setVelocityX(0);
+      this.setVelocityY(0);
+      this.body.enable = false;
+    }
+
     this.setActive(false);
     this.setVisible(false);
   }
@@ -278,8 +289,8 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
   preUpdate(time, delta) {
     super.preUpdate(time, delta);
 
-    // Game over si el enemigo llega a x=880
-    if (this.x >= 880 && this.isAlive) {
+    // Game over si el enemigo llega a x=880 (solo para enemigos normales)
+    if (this.x >= 880 && this.isAlive && !this.isBoss) {
       this.stop();
 
       if (this.scene.gameOver) {

@@ -34,6 +34,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("mouse",                 "assets/sprites/player.png");
     this.load.image("snowman-small-idle0",   "assets/sprites/small_cat.png");
     this.load.image("snowman-big-throw",     "assets/sprites/big_cat.png");
+    this.load.image("final_boss",            "assets/sprites/final_boss.png");
 
     // =========================
     // JEFE FINAL - 6 FRAMES HORIZONTALES
@@ -105,38 +106,33 @@ export default class PreloadScene extends Phaser.Scene {
       g2.destroy();
     }
 
-    // ====== ANIMACIONES DEL JEFE FINAL ======
-    // 6 frames: 0, 1, 2, 3, 4, 5
-    
-    // Animación IDLE (frames 0-1): Respiración
-    this.anims.create({
-      key: 'final_boss_idle',
-      frames: this.anims.generateFrameNumbers('final_boss', { start: 0, end: 1 }),
-      frameRate: 4,
-      repeat: -1
-    });
+    if (!this.anims.exists('final_boss_idle')) {
+      this.anims.create({
+        key: 'final_boss_idle',
+        frames: [{ key: 'final_boss' }],
+        frameRate: 1,
+        repeat: -1
+      });
+    }
 
-    // Animación TAUNT (frames 2-3): Rugido/provocación
-    this.anims.create({
-      key: 'final_boss_taunt',
-      frames: this.anims.generateFrameNumbers('final_boss', { start: 2, end: 3 }),
-      frameRate: 6,
-      repeat: 0
-    });
+    if (!this.anims.exists('final_boss_attack')) {
+      this.anims.create({
+        key: 'final_boss_attack',
+        frames: [{ key: 'final_boss' }],
+        frameRate: 1,
+        repeat: 0
+      });
+    }
 
-    // Animación ATTACK (frames 4-5): Ataque
-    this.anims.create({
-      key: 'final_boss_attack',
-      frames: this.anims.generateFrameNumbers('final_boss', { start: 4, end: 5 }),
-      frameRate: 8,
-      repeat: 0
-    });
+    if (!this.anims.exists('final_boss_taunt')) {
+      this.anims.create({
+        key: 'final_boss_taunt',
+        frames: [{ key: 'final_boss' }],
+        frameRate: 1,
+        repeat: 0
+      });
+    }
 
-    // Debug
-    console.log('🎮 Frames del jefe final:', this.textures.get('final_boss').frameTotal);
-    console.log('✅ Dimensiones por frame: 213x311px');
-    console.log('✅ Animaciones: idle (0-1), taunt (2-3), attack (4-5)');
-    
     this.scene.start("MenuScene");
   }
 }
