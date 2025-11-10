@@ -25,6 +25,7 @@ export default class GameScene extends Phaser.Scene {
     this.level2Reached = false;
     this.level3Reached = false;
     this.levelMessage = null;
+    this.levelTransitionInProgress = false;
     this.level1Music = null;
     this.level2Music = null;
     this.level3Music = null;
@@ -58,6 +59,7 @@ export default class GameScene extends Phaser.Scene {
     this.level2Reached = false;
     this.level3Reached = false;
     this.levelMessage = null;
+    this.levelTransitionInProgress = false;
     this.level1Music = null;
     this.level2Music = null;
     this.level3Music = null;
@@ -166,96 +168,157 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  reachSecondLevel() {
-    this.level2Reached = true;
+  playLevelTransition({ duration = 600, onMidpoint, onComplete } = {}) {
+    const camera = this.cameras?.main;
 
-    this.level1Music?.stop();
-    if (!this.level2Music) this.level2Music = this.sound.add('nivel2', { loop: true, volume: 0.9 });
-    this.level2Music.play();
+    if (!camera || this.levelTransitionInProgress) {
+      onMidpoint?.();
+      onComplete?.();
+      return;
+    }
 
-    this.backgroundImage?.setTexture('esenario2');
+    this.levelTransitionInProgress = true;
 
-    this.adjustDifficulty({
-      spawnMin: 1500,
-      spawnMax: 3000,
-      timeScale: 1.15,
-      enemySpeedSmall: 120,
-      enemySpeedBig: 100
-    });
+    const cameraEvents = Phaser.Cameras?.Scene2D?.Events;
+    const fadeOutEvent = cameraEvents?.FADE_OUT_COMPLETE || 'camerafadeoutcomplete';
+    const fadeInEvent = cameraEvents?.FADE_IN_COMPLETE || 'camerafadeincomplete';
+
+    const handleFadeInComplete = () => {
+      camera.off(fadeInEvent, handleFadeInComplete);
+      this.levelTransitionInProgress = false;
+      onComplete?.();
+    };
+
+    const handleFadeOutComplete = () => {
+      camera.off(fadeOutEvent, handleFadeOutComplete);
+      onMidpoint?.();
+      camera.fadeIn(duration, 0, 0, 0);
+      camera.once(fadeInEvent, handleFadeInComplete);
+    };
+
+    camera.once(fadeOutEvent, handleFadeOutComplete);
+    camera.fadeOut(duration, 0, 0, 0);
+  }
+
+  showLevelBanner({
+    text,
+    color = '#ffffff',
+    stroke = '#000000',
+    strokeThickness = 6,
+    fontSize = 48,
+    delay = 1800
+  } = {}) {
+    if (!text) return;
 
     this.levelMessage?.destroy();
-    this.levelMessage = this.add.text(512, 100, 'Segundo nivel', {
+
+    const camera = this.cameras?.main;
+    const x = camera ? camera.centerX : 512;
+
+    this.levelMessage = this.add.text(x, 100, text, {
       fontFamily: 'CartoonFont',
-      fontSize: 48,
-      color: '#ffeb3b',
-      stroke: '#000',
-      strokeThickness: 6
+      fontSize,
+      color,
+      stroke,
+      strokeThickness
     }).setOrigin(0.5).setDepth(15);
 
     this.tweens.add({
       targets: this.levelMessage,
       alpha: 0,
       duration: 800,
-      delay: 2200,
+      delay,
       ease: 'Power2',
       onComplete: () => {
         this.levelMessage?.destroy();
         this.levelMessage = null;
       }
+    });
+  }
+
+  reachSecondLevel() {
+    this.level2Reached = true;
+
+    const applyChanges = () => {
+      this.level1Music?.stop();
+      if (!this.level2Music) {
+        this.level2Music = this.sound.add('nivel2', { loop: true, volume: 0.9 });
+      }
+      this.level2Music.play();
+
+      this.backgroundImage?.setTexture('esenario2');
+
+      this.adjustDifficulty({
+        spawnMin: 1500,
+        spawnMax: 3000,
+        timeScale: 1.15,
+        enemySpeedSmall: 120,
+        enemySpeedBig: 100
+      });
+    };
+
+    const announce = () => {
+      this.showLevelBanner({
+        text: 'Segundo nivel',
+        color: '#ffeb3b',
+        fontSize: 48,
+        delay: 2200
+      });
+    };
+
+    this.playLevelTransition({
+      duration: 600,
+      onMidpoint: applyChanges,
+      onComplete: announce
     });
   }
 
   reachThirdLevel() {
     this.level3Reached = true;
 
-    this.level2Music?.stop();
-    try {
-      if (this.cache.audio?.exists('nivel3')) {
-        if (!this.level3Music) this.level3Music = this.sound.add('nivel3', { loop: true, volume: 0.9 });
-        this.level3Music.play();
-      }
-    } catch (e) {}
+    const applyChanges = () => {
+      this.level2Music?.stop();
+      try {
+        if (this.cache.audio?.exists('nivel3')) {
+          if (!this.level3Music) {
+            this.level3Music = this.sound.add('nivel3', { loop: true, volume: 0.9 });
+          }
+          this.level3Music.play();
+        }
+      } catch (e) {}
 
-    this.backgroundImage?.setTexture('nivel3');
+      this.backgroundImage?.setTexture('nivel3');
 
-    // ✅ Usar adjustDifficulty para aumentar velocidad y frecuencia
-    this.adjustDifficulty({
-      spawnMin: 800,    // Más frecuente que el nivel 2 (1500)
-      spawnMax: 2000,   // Más frecuente que el nivel 2 (3000)
-      timeScale: 1.25,  // Acelerar un poco el juego en general
-      enemySpeedSmall: 160, // Más rápido que el nivel 2 (120)
-      enemySpeedBig: 130    // Más rápido que el nivel 2 (100)
+      this.adjustDifficulty({
+        spawnMin: 800,
+        spawnMax: 2000,
+        timeScale: 1.25,
+        enemySpeedSmall: 160,
+        enemySpeedBig: 130
+      });
+
+      this.level3SmallSpawnCount = 0;
+      this.finalBossSpawned = false;
+      this.finalBosses = [];
+      this.clearBossUI();
+      this.updateBossCountdownText();
+    };
+
+    const announce = () => {
+      this.showLevelBanner({
+        text: '¡FINAL!',
+        color: '#ff5722',
+        fontSize: 52,
+        delay: 1800
+      });
+    };
+
+    this.playLevelTransition({
+      duration: 700,
+      onMidpoint: applyChanges,
+      onComplete: announce
     });
-
-    this.levelMessage?.destroy();
-    this.levelMessage = this.add.text(512, 100, '¡FINAL!', {
-      fontFamily: 'CartoonFont',
-      fontSize: 52,
-      color: '#ff5722',
-      stroke: '#000',
-      strokeThickness: 6
-    }).setOrigin(0.5).setDepth(15);
-
-    this.tweens.add({
-      targets: this.levelMessage,
-      alpha: 0,
-      duration: 800,
-      delay: 1800,
-      ease: 'Power2',
-      onComplete: () => {
-        this.levelMessage?.destroy();
-        this.levelMessage = null;
-      }
-    });
-
-    this.level3SmallSpawnCount = 0;
-    this.finalBossSpawned = false;
-    this.finalBosses = [];
-    this.clearBossUI();
-
-    this.updateBossCountdownText();
   }
-
   updateBossCountdownText() {
     if (this.finalBossSpawned) {
       this.destroyBossCountdownUI();
