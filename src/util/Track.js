@@ -1,3 +1,5 @@
+// Track.js - Versión corregida con mejor manejo de timers
+
 import Enemy from '../entities/Enemy.js';
 import PlayerShoot from '../entities/PlayerShoot.js';
 import EnemyShoot from '../entities/EnemyShoot.js';
@@ -22,11 +24,14 @@ export default class Track {
     if (scene.allEnemies) {
       scene.allEnemies.add(this.snowmanBig);
       scene.allEnemies.add(this.snowmanSmall);
-      //console.log(`✅ Enemigos del track ${id} añadidos al grupo global`);
     }
 
     this.releaseTimerSmall = null;
     this.releaseTimerBig = null;
+
+    // ✅ NUEVO: Guardar configuración actual
+    this.currentMinDelay = 3000;
+    this.currentMaxDelay = 6000;
   }
 
   setEnemySpeeds({ small, big }) {
@@ -58,73 +63,100 @@ export default class Track {
   }
 
   start(minDelay, maxDelay) {
+    // ✅ CRÍTICO: Detener timers anteriores ANTES de crear nuevos
+    this.stop();
 
-    this.snowmanSmall.start();
+    // ✅ Guardar configuración
+    this.currentMinDelay = minDelay;
+    this.currentMaxDelay = maxDelay;
 
+    // ✅ Iniciar el primer enemigo pequeño inmediatamente
+    if (!this.snowmanSmall.isAlive) {
+      this.snowmanSmall.start();
+    }
 
-    // Función para obtener un nuevo delay aleatorio para ambos tipos de enemigos
+    // Función para obtener delay aleatorio
     const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
 
-    // Temporizador para el enemigo pequeño (snowmanSmall)
+    // ✅ Timer para enemigo pequeño con verificación de estado
     this.releaseTimerSmall = this.scene.time.addEvent({
       delay: getDelay(),
       callback: () => {
+        // ✅ Verificar que el timer sigue siendo válido
+        if (!this.releaseTimerSmall) return;
+
         if (!this.snowmanSmall.isAlive) {
           this.snowmanSmall.start();
         }
-        // Asignamos un nuevo delay aleatorio para la siguiente aparición
-        this.releaseTimerSmall.delay = getDelay();
+        
+        // ✅ Asignar nuevo delay aleatorio
+        if (this.releaseTimerSmall) {
+          this.releaseTimerSmall.delay = getDelay();
+        }
       },
       loop: true
     });
 
-    // Temporizador para el enemigo grande (snowmanBig)
+    // ✅ Timer para enemigo grande
     this.releaseTimerBig = this.scene.time.addEvent({
-      delay: getDelay() * 3,
+      delay: getDelay() * 2,
       callback: () => {
+        // ✅ Verificar que el timer sigue siendo válido
+        if (!this.releaseTimerBig) return;
+
         if (!this.snowmanBig.isAlive) {
           this.snowmanBig.start();
         }
-        // ✅ Corregido: actualiza su propio delay, no el del otro timer
-        this.releaseTimerBig.delay = getDelay() * 2;
+        
+        // ✅ Asignar nuevo delay aleatorio
+        if (this.releaseTimerBig) {
+          this.releaseTimerBig.delay = getDelay() * 2;
+        }
       },
       loop: true
     });
+
+    console.log(`✅ Track ${this.id} iniciado con delays: ${minDelay}-${maxDelay}ms`);
   }
 
   stop() {
-    this.snowmanSmall.stop();
-    this.snowmanBig.stop();
+    // ✅ Detener enemigos
+    if (this.snowmanSmall) {
+      this.snowmanSmall.stop();
+    }
+    if (this.snowmanBig) {
+      this.snowmanBig.stop();
+    }
 
-    if (this.releaseTimerSmall) this.releaseTimerSmall.remove();
-    if (this.releaseTimerBig) this.releaseTimerBig.remove();
+    // ✅ Remover timers de forma segura
+    if (this.releaseTimerSmall) {
+      this.releaseTimerSmall.remove();
+      this.releaseTimerSmall = null;
+    }
+    if (this.releaseTimerBig) {
+      this.releaseTimerBig.remove();
+      this.releaseTimerBig = null;
+    }
+
+    console.log(`🛑 Track ${this.id} detenido`);
   }
 
-  // =========================
-  // Disparos
-  // =========================
-  throwPlayerSnowball(x) {
-    //console.log('🔫 Disparando proyectil del jugador en track', this.id);
-    
-    // Crear nuevo proyectil (sin posición inicial para evitar conflictos)
-    const snowball = new PlayerShoot(this.scene, 0, 0, 'projectile');
-    
-    // ✅ Añadir al grupo GLOBAL
-    this.scene.allPlayerProjectiles.add(snowball);
-    
-    // Activar proyectil
-    snowball.fire(x, this.y);
+  // ✅ NUEVO: Método para reiniciar con los mismos parámetros
+  restart() {
+    this.start(this.currentMinDelay, this.currentMaxDelay);
+  }
 
+  throwPlayerSnowball(x) {
+    const snowball = new PlayerShoot(this.scene, 0, 0, 'projectile');
+    this.scene.allPlayerProjectiles.add(snowball);
+    snowball.fire(x, this.y);
   }
 
   throwEnemySnowball(x) {
     const snowball = new EnemyShoot(this.scene, x, this.y, 'projectileEnemy');
     this.scene.add.existing(snowball);
     this.scene.physics.add.existing(snowball);
-    
-    // ✅ Añadir al grupo GLOBAL
     this.scene.allEnemyProjectiles.add(snowball);
-    
     snowball.fire(x, this.y);
   }
 }

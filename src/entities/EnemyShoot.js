@@ -14,10 +14,17 @@ export default class EnemyShoot extends Phaser.Physics.Arcade.Sprite {
         // Configuraciones iniciales
         // ✅ Aquí puedes cambiar el tamaño del proyectil del enemigo.
         this.setScale(0.2); // Antes era 0.5, ahora será un 70% del tamaño original.
+        this.body.setSize(650, 100);  // Tamaño en píxeles del sprite original
         this.body.setAllowGravity(false);
     }
 
     fire(x, y, speed = 500) {
+
+if (x < 0 || x > this.scene.scale.width) {
+       this.stop();
+       return;
+   }
+
         this.body.enable = true;
         
         this.setActive(true);

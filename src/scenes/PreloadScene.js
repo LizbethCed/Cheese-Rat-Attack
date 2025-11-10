@@ -52,6 +52,7 @@ export default class PreloadScene extends Phaser.Scene {
     // ELEMENTOS / PROPS
     // =========================
     this.load.image("nest", "assets/images/elementos/nest.png");
+    this.load.image("attack_indicator", "assets/images/elementos/indicador.png");
 
     // PROYECTILES
     this.load.image("projectile",       "assets/images/bala.png");

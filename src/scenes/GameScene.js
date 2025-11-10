@@ -129,6 +129,10 @@ export default class GameScene extends Phaser.Scene {
     this.input.keyboard.once('keydown-UP', this.start, this);
     this.input.keyboard.once('keydown-DOWN', this.start, this);
     this.input.keyboard.once('keydown-ESC', () => this.scene.start('MenuScene'));
+/* 
+    this.physics.world.createDebugGraphic();
+    this.physics.world.defaults.debugShowBody = true;
+    this.physics.world.defaults.debugShowVelocity = false; */
   }
 
   // --- Puntuación y progresión ---
@@ -142,8 +146,8 @@ export default class GameScene extends Phaser.Scene {
       this.registry.set('highscore', this.highscore);
     }
 
-    if (!this.level2Reached && this.score >= 5) this.reachSecondLevel();
-    if (!this.level3Reached && this.score >= 10) this.reachThirdLevel();
+    if (!this.level2Reached && this.score >= 10) this.reachSecondLevel();
+    if (!this.level3Reached && this.score >= 15) this.reachThirdLevel();
   }
 
   adjustDifficulty({ spawnMin, spawnMax, timeScale, enemySpeedSmall, enemySpeedBig }) {
@@ -274,10 +278,12 @@ export default class GameScene extends Phaser.Scene {
   }
 
   reachThirdLevel() {
-    this.level3Reached = true;
+  this.level3Reached = true;
 
     const applyChanges = () => {
       this.level2Music?.stop();
+      
+      // Intentar reproducir música del nivel 3
       try {
         if (this.cache.audio?.exists('nivel3')) {
           if (!this.level3Music) {
@@ -289,6 +295,10 @@ export default class GameScene extends Phaser.Scene {
 
       this.backgroundImage?.setTexture('nivel3');
 
+      // Detener tracks actuales
+      this.tracks.forEach(track => track.stop());
+
+      // Ajustar dificultad
       this.adjustDifficulty({
         spawnMin: 800,
         spawnMax: 2000,
@@ -297,12 +307,25 @@ export default class GameScene extends Phaser.Scene {
         enemySpeedBig: 130
       });
 
+      // Reiniciar explícitamente cada track
+      this.tracks.forEach((track, index) => {
+        const baseDelay = 800;
+        const maxDelay = 2000;
+        // Escalonar los delays para evitar que todos spawnen a la vez
+        track.start(
+          baseDelay + (index * 200),
+          maxDelay + (index * 200)
+        );
+      });
+
+      // Reiniciar contadores del boss
       this.level3SmallSpawnCount = 0;
       this.finalBossSpawned = false;
       this.finalBosses = [];
       this.clearBossUI();
       this.updateBossCountdownText();
     };
+
 
     const announce = () => {
       this.showLevelBanner({
@@ -319,6 +342,7 @@ export default class GameScene extends Phaser.Scene {
       onComplete: announce
     });
   }
+
   updateBossCountdownText() {
     if (this.finalBossSpawned) {
       this.destroyBossCountdownUI();
@@ -469,23 +493,68 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  // ✅ NUEVO: Ataque especial que dispara en los 4 carriles
+  // ✅ MODIFICADO: Ataque especial que dispara en 3 de 4 carriles, con aviso.
   bossLaneAttack(boss) {
     if (!boss || !boss.isAlive || !this.player?.isAlive) return;
 
-    // Animación de "aviso" para que el jugador pueda reaccionar
+    // 1. Animación de "aviso" del jefe
     boss.play?.('final_boss_taunt');
 
-    // Tras la animación, lanzar los proyectiles
-    this.time.delayedCall(400, () => {
+    // 2. Elegir un carril seguro aleatoriamente
+    const safeLaneIndex = Phaser.Math.Between(0, this.tracks.length - 1);
+    const attackLanes = this.tracks.filter((_, index) => index !== safeLaneIndex);
+
+    // 3. Crear indicadores visuales para los carriles de ataque (telegraphing)
+    const indicators = [];
+    attackLanes.forEach(track => {
+      // ✅ Añadir la línea roja de fondo
+      const laneIndicator = this.add.graphics({ fillStyle: { color: 0xff0000, alpha: 0.4 } });
+      laneIndicator.fillRect(0, track.y - 80, this.scale.width, 160);
+      laneIndicator.setDepth(9); // Un poco por detrás de la imagen
+      indicators.push(laneIndicator);
+
+      // ✅ Añadir la imagen del indicador centrada
+      const imageIndicator = this.add.image(this.scale.width / 2, track.y, 'attack_indicator');
+      imageIndicator.setOrigin(0.5, 0.5); // Centrar la imagen en su posición
+      imageIndicator.setScale(0.2);
+      imageIndicator.setDepth(10);
+      imageIndicator.setAlpha(0.7);
+      indicators.push(imageIndicator);
+
+      // ✅ Animación de "pulso" para el indicador
+      this.tweens.add({
+        targets: [laneIndicator, imageIndicator], // Animar ambos indicadores
+        alpha: 0.4,
+        duration: 250, // Duración de cada pulso
+        ease: 'Sine.easeInOut',
+        yoyo: true, // Hace que la animación vaya y vuelva (0.7 -> 0.4 -> 0.7)
+        repeat: -1 // Repetir indefinidamente hasta que se destruya
+      });
+    });
+
+    // 4. Tras un breve momento, lanzar los proyectiles y limpiar los indicadores
+    this.time.delayedCall(800, () => {
       if (!boss?.isAlive) return;
 
-      boss.play?.('final_boss_idle'); // Volver a la animación normal
+      // Volver a la animación normal del jefe
+      boss.play?.('final_boss_idle');
 
-      this.tracks.forEach(track => {
+      // Disparar en los carriles de ataque
+      attackLanes.forEach(track => {
         const projectile = new EnemyShoot(this, boss.x, track.y, 'projectileEnemy');
         this.allEnemyProjectiles.add(projectile);
-        projectile.fire(boss.x, track.y, 600); // Usamos una velocidad ligeramente menor para este ataque
+        projectile.fire(boss.x, track.y, 600);
+      });
+
+      // Desvanecer y destruir los indicadores visuales
+      // Detenemos los tweens de pulso primero
+      indicators.forEach(ind => this.tweens.killTweensOf(ind));
+
+      this.tweens.add({
+        targets: indicators,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => indicators.forEach(ind => ind.destroy())
       });
     });
   }
@@ -539,10 +608,12 @@ export default class GameScene extends Phaser.Scene {
   bossAttack(boss) {
     if (!boss || !boss.isAlive) return;
 
-    boss.play?.('final_boss_attack');
+    // Ya verificamos que boss existe y está vivo, así que podemos llamar directamente a play
+    boss.play('final_boss_attack');
     boss.once('animationcomplete', () => {
-      if (boss && boss.isAlive) {
-        boss.play?.('final_boss_idle');
+      // ✅ Añadir verificación de que el jefe todavía existe en la escena
+      if (boss && boss.isAlive && boss.scene) {
+        boss.play('final_boss_idle');
       }
     });
 
@@ -581,7 +652,7 @@ hitEnemy(projectile, enemy) {
     enemy.play?.('final_boss_taunt', true);
 
     this.time.delayedCall(400, () => {
-      if (enemy && enemy.isAlive) {
+      if (enemy && enemy.isAlive && enemy.scene) {
         enemy.play?.('final_boss_idle');
       }
     });
@@ -678,10 +749,15 @@ hitEnemy(projectile, enemy) {
   }
 
   // Enemigos normales
-  const points = enemy.size === 'Small' ? 5 : 10;
-  this.addScore(points);
-  this.sound.play('enemy_kill', { volume: 0.5 });
   enemy.hit();
+
+  // ✅ Otorgar puntos SOLO si el enemigo es derrotado en este golpe.
+  if (!enemy.isAlive) {
+    const points = enemy.size === 'Small' ? 5 : 10;
+    this.addScore(points);
+    // El sonido de muerte ya se reproduce dentro de enemy.hit()
+    // this.sound.play('enemy_kill', { volume: 0.5 });
+  }
 
   if (this.anims.exists('snow_explode')) {
     const explosion = this.add.sprite(enemy.x, enemy.y - 30, 'snow_explosion');
