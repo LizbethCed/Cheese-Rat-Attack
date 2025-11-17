@@ -353,16 +353,25 @@ stop() {
   this.y = -200;
 }
 
-  preUpdate(time, delta) {
+ preUpdate(time, delta) {
     super.preUpdate(time, delta);
 
-    // Game over si el enemigo llega a x=880 (solo para enemigos normales)
-    if (this.x >= 880 && this.isAlive && !this.isBoss) {
+    // ✅ VERIFICACIONES ADICIONALES antes de llamar gameOver
+    if (this.x >= 880 && this.isAlive && this.active && !this.isBoss) {
+      // 🔍 LOG antes de llamar gameOver
+      console.warn('⚠️ Enemigo llegó a la base:', {
+        size: this.size,
+        x: Math.round(this.x),
+        y: Math.round(this.y),
+        isAlive: this.isAlive,
+        active: this.active
+      });
+      
       this.stop();
 
       if (this.scene.gameOver) {
-        this.scene.gameOver();
+        this.scene.gameOver(`ENEMIGO_EN_BASE_${this.size}`);
       }
     }
-  }
+}
 }

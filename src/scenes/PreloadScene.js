@@ -28,6 +28,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("controls",        "assets/images/elementos/controls.png");
     this.load.image("gameover",        "assets/images/elementos/gameover.png");
     this.load.image("descarga",        "assets/images/elementos/you_win.png");
+    this.load.image("easter_egg",      "assets/images/elementos/easter_egg.png");
 
     // =========================
     // PERSONAJES / ENEMIGOS
@@ -78,6 +79,8 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.audio("enemy_kill",  "assets/audio/enemy_kill.mp3");
     this.load.audio("gameover",    "assets/audio/gameover.wav");
     this.load.audio("victory",         "assets/audio/win.mp3");
+    this.load.audio("click",       "assets/audio/click.mp3");
+    this.load.audio("easter_egg",        "assets/audio/easter_egg.mp3");
    
     // Música
     this.load.audio("music",       "assets/audio/music.mp3");

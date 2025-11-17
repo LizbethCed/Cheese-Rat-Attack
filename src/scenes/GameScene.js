@@ -74,6 +74,9 @@ export default class GameScene extends Phaser.Scene {
     this.finalBossSpawnThreshold = 10;
     this.destroyVictoryUI();
 
+    this.deathCause = null;
+
+
     // ✅ Reiniciar el flag del sonido de victoria aquí
     this.winSoundPlayed = false;
 
@@ -129,8 +132,8 @@ export default class GameScene extends Phaser.Scene {
     this.input.keyboard.once('keydown-UP', this.start, this);
     this.input.keyboard.once('keydown-DOWN', this.start, this);
     this.input.keyboard.once('keydown-ESC', () => this.scene.start('MenuScene'));
-/* 
-    this.physics.world.createDebugGraphic();
+
+    /* this.physics.world.createDebugGraphic();
     this.physics.world.defaults.debugShowBody = true;
     this.physics.world.defaults.debugShowVelocity = false; */
   }
@@ -146,8 +149,8 @@ export default class GameScene extends Phaser.Scene {
       this.registry.set('highscore', this.highscore);
     }
 
-    if (!this.level2Reached && this.score >= 10) this.reachSecondLevel();
-    if (!this.level3Reached && this.score >= 15) this.reachThirdLevel();
+    if (!this.level2Reached && this.score >= 150) this.reachSecondLevel();
+    if (!this.level3Reached && this.score >= 300) this.reachThirdLevel();
   }
 
   adjustDifficulty({ spawnMin, spawnMax, timeScale, enemySpeedSmall, enemySpeedBig }) {
@@ -825,13 +828,30 @@ hitEnemy(projectile, enemy) {
     playerProj.destroy(); enemyProj.destroy();
   }
 
-  hitPlayer(player, enemyProj) {
-    if (!player.isAlive) return;
+ hitPlayer(player, enemyProj) {
+    if (!player?.isAlive || !player?.active) {
+        console.warn('⚠️ Colisión ignorada: jugador no válido');
+        return;
+    }
+    
+    if (!enemyProj?.active || !enemyProj?.visible) {
+        console.warn('⚠️ Colisión ignorada: proyectil no válido');
+        return;
+    }
+
+    // 🔍 LOG DETALLADO
+    console.error('💥 JUGADOR GOLPEADO por proyectil:', {
+        proyectilX: Math.round(enemyProj.x),
+        proyectilY: Math.round(enemyProj.y),
+        jugadorX: Math.round(player.x),
+        jugadorY: Math.round(player.y)
+    });
+
     enemyProj.destroy();
     player.setVisible(false);
     player.stop();
-    this.gameOver();
-  }
+    this.gameOver('PROYECTIL_ENEMIGO');
+}
 
  showVictoryPanel() {
   if (this.victoryShown) return;
@@ -966,7 +986,55 @@ hitEnemy(projectile, enemy) {
     this.victoryShown = false;
   }
 
-  gameOver() {
+
+  gameOver(cause = 'DESCONOCIDO') {
+  // 🔍 LOG CRÍTICO PARA IDENTIFICAR CAUSA
+  console.error('🚨 GAME OVER ACTIVADO');
+  console.error('📍 Causa:', cause);
+  console.error('🎮 Estado del jugador:', {
+    x: this.player?.x,
+    y: this.player?.y,
+    isAlive: this.player?.isAlive,
+    visible: this.player?.visible
+  });
+  
+  // 🔍 LOG DE ENEMIGOS ACTIVOS
+  console.error('👾 Enemigos activos:', 
+    this.allEnemies.children.entries
+      .filter(e => e.active)
+      .map(e => ({
+        size: e.size,
+        x: Math.round(e.x),
+        y: Math.round(e.y),
+        isAlive: e.isAlive,
+        isBoss: e.isBoss
+      }))
+  );
+  
+  // 🔍 LOG DE PROYECTILES ENEMIGOS ACTIVOS
+  console.error('💥 Proyectiles enemigos activos:', 
+    this.allEnemyProjectiles.children.entries
+      .filter(p => p.active)
+      .map(p => ({
+        x: Math.round(p.x),
+        y: Math.round(p.y)
+      }))
+  );
+  
+  // 🔍 LOG DE BOSSES
+  if (this.finalBosses.length > 0) {
+    console.error('👹 Jefes activos:', 
+      this.finalBosses.map(b => ({
+        x: Math.round(b.x),
+        y: Math.round(b.y),
+        isAlive: b.isAlive
+      }))
+    );
+  }
+
+  console.error('=====================================');
+  
+  this.deathCause = cause;
   // Detiene todo
   this.tracks.forEach(track => track.stop());
   this.sound.stopAll();
