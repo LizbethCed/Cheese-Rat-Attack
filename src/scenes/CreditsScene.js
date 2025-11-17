@@ -78,10 +78,22 @@ export default class CreditsScene extends Phaser.Scene {
     this.input.keyboard.createCombo(konamiSequence, { resetOnMatch: true });
 
     this.input.keyboard.on('keycombomatch', (comboName, event) => {
-      const secretText = "15082025 - NOVA GAMES STUDIO";
+      // Detener la música de fondo del menú
+      this.sound.stopByKey('music_menu');
+
+      // Reproducir la música del easter egg desde el segundo 2
+      const music = this.sound.add('easter_egg', { volume: 0.8 });
+      music.play({ seek: 2 });
+
+      const image = this.add.image(centerX, centerY - 50, 'easter_egg')
+        .setOrigin(0.5)
+        .setScale(0.4) // Ajusta la escala si es necesario
+        .setAlpha(1);
+
+      const secretText = "Orden 66 activada.\n¡Que la fuerza te acompañe!";
       const text = this.add.text(centerX, centerY + 250, secretText, {
         fontSize: "36px",
-        fill: "#ff00ff",
+        fill: "#db0000ff",
         fontFamily: "CartoonFont",
         stroke: "#ffffff",
         strokeThickness: 6,
@@ -89,10 +101,33 @@ export default class CreditsScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       this.tweens.add({
-        targets: text,
+        targets: [image, text],
         alpha: 0,
         duration: 1000,
         delay: 3000,
+        ease: 'Power2',
+        onComplete: () => {
+          image?.destroy();
+          text?.destroy();
+          music?.stop();
+
+          // Volver a poner la música del menú
+          let menuMusic = this.sound.get('music_menu');
+          if (!menuMusic) {
+            menuMusic = this.sound.add('music_menu', { loop: true, volume: 0.5 });
+          }
+          if (menuMusic && !menuMusic.isPlaying) {
+            menuMusic.play();
+          }
+        }
+      });
+
+      // Tween para desvanecer la música
+      this.tweens.add({
+        targets: music,
+        volume: 0,
+        duration: 1000, // Misma duración que el desvanecimiento visual
+        delay: 3000,   // Mismo retraso
         ease: 'Power2'
       });
     });
