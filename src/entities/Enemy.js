@@ -357,7 +357,7 @@ stop() {
     super.preUpdate(time, delta);
 
     // ✅ VERIFICACIONES ADICIONALES antes de llamar gameOver
-    if (this.x >= 880 && this.isAlive && this.active && !this.isBoss) {
+    if (this.x >= 880 && this.isAlive && this.active && this.visible && !this.isBoss) {
       // 🔍 LOG antes de llamar gameOver
       console.warn('⚠️ Enemigo llegó a la base:', {
         size: this.size,

@@ -62,34 +62,37 @@ export default class Track {
     }
   }
 
-  start(minDelay, maxDelay) {
-    // ✅ CRÍTICO: Detener timers anteriores ANTES de crear nuevos
+   start(minDelay, maxDelay) {
+    // ✅ CRÍTICO: Detener timers ANTES de crear nuevos
     this.stop();
 
     // ✅ Guardar configuración
     this.currentMinDelay = minDelay;
     this.currentMaxDelay = maxDelay;
 
-    // ✅ Iniciar el primer enemigo pequeño inmediatamente
+    // ✅ Iniciar enemigos inmediatamente (sin delay)
     if (!this.snowmanSmall.isAlive) {
       this.snowmanSmall.start();
     }
+    if (!this.snowmanBig.isAlive) {
+      this.snowmanBig.start();
+    }
 
-    // Función para obtener delay aleatorio
+    // Función para obtener delay aleatorio (MÁS CONSISTENTE)
     const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
 
-    // ✅ Timer para enemigo pequeño con verificación de estado
+    // ✅ Timer para enemigo pequeño con verificación estricta
     this.releaseTimerSmall = this.scene.time.addEvent({
       delay: getDelay(),
       callback: () => {
-        // ✅ Verificar que el timer sigue siendo válido
-        if (!this.releaseTimerSmall) return;
-
-        if (!this.snowmanSmall.isAlive) {
+        // Verificar que el timer existe y no ha sido cancelado
+        if (!this.releaseTimerSmall || !this.scene) return;
+        
+        // Solo spawner si no está vivo
+        if (this.snowmanSmall && !this.snowmanSmall.isAlive) {
           this.snowmanSmall.start();
         }
-        
-        // ✅ Asignar nuevo delay aleatorio
+        // Asignar nuevo delay ANTES de la próxima iteración
         if (this.releaseTimerSmall) {
           this.releaseTimerSmall.delay = getDelay();
         }
@@ -97,38 +100,28 @@ export default class Track {
       loop: true
     });
 
-    // ✅ Timer para enemigo grande
+    // ✅ Timer para enemigo grande (MISMO INTERVALO que pequeño ahora)
     this.releaseTimerBig = this.scene.time.addEvent({
-      delay: getDelay() * 2,
+      delay: getDelay(),
       callback: () => {
-        // ✅ Verificar que el timer sigue siendo válido
-        if (!this.releaseTimerBig) return;
-
-        if (!this.snowmanBig.isAlive) {
+        // Verificar que el timer existe y no ha sido cancelado
+        if (!this.releaseTimerBig || !this.scene) return;
+        
+        // Solo spawner si no está vivo
+        if (this.snowmanBig && !this.snowmanBig.isAlive) {
           this.snowmanBig.start();
         }
-        
-        // ✅ Asignar nuevo delay aleatorio
+        // Asignar nuevo delay ANTES de la próxima iteración
         if (this.releaseTimerBig) {
-          this.releaseTimerBig.delay = getDelay() * 2;
+          this.releaseTimerBig.delay = getDelay();
         }
       },
       loop: true
     });
-
-    console.log(`✅ Track ${this.id} iniciado con delays: ${minDelay}-${maxDelay}ms`);
   }
 
-  stop() {
-    // ✅ Detener enemigos
-    if (this.snowmanSmall) {
-      this.snowmanSmall.stop();
-    }
-    if (this.snowmanBig) {
-      this.snowmanBig.stop();
-    }
-
-    // ✅ Remover timers de forma segura
+   stop() {
+    // ✅ Cancelar TODOS los timers de forma segura
     if (this.releaseTimerSmall) {
       this.releaseTimerSmall.remove();
       this.releaseTimerSmall = null;
@@ -138,13 +131,16 @@ export default class Track {
       this.releaseTimerBig = null;
     }
 
-    console.log(`🛑 Track ${this.id} detenido`);
+    // Detener enemigos
+    if (this.snowmanSmall) this.snowmanSmall.stop();
+    if (this.snowmanBig) this.snowmanBig.stop();
   }
 
-  // ✅ NUEVO: Método para reiniciar con los mismos parámetros
+    // ✅ NUEVO: Reiniciar con los mismos parámetros (útil para cambios de nivel)
   restart() {
     this.start(this.currentMinDelay, this.currentMaxDelay);
   }
+
 
   throwPlayerSnowball(x) {
     const snowball = new PlayerShoot(this.scene, 0, 0, 'projectile');
