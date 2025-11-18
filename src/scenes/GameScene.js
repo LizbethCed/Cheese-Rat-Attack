@@ -40,7 +40,7 @@ export default class GameScene extends Phaser.Scene {
     this.victoryPanel = null;
     this.winSoundPlayed = false;
 
-    this.bossMaxHealth = 300; // Por ejemplo, para hacerlo más difícil
+    this.bossMaxHealth = 500; // Por ejemplo, para hacerlo más difícil
     this.totalFinalBosses = 1;
     this.finalBossSpawned = false;
     this.level3SmallSpawnCount = 0;
@@ -169,10 +169,6 @@ export default class GameScene extends Phaser.Scene {
       }
     });
 
-    if (timeScale) {
-      this.time.timeScale = timeScale;
-      this.physics?.world && (this.physics.world.timeScale = timeScale);
-    }
   }
 
   playLevelTransition({ duration = 600, onMidpoint, onComplete } = {}) {
@@ -811,14 +807,14 @@ hitEnemy(projectile, enemy) {
           boss.nextLaneY = null;
           this.scheduleBossLaneChange(boss, laneYs);
         } else {
-          const vy = Phaser.Math.Clamp(dy, -30, 30);
+          const vy = Phaser.Math.Clamp(dy, -60, 60);
           boss.setVelocityY(vy);
         }
       }
 
       const targetX = Math.max(this.player.x - 200, 180);
       const dx = targetX - boss.x;
-      const vx = Phaser.Math.Clamp(dx, -40, 40);
+      const vx = Phaser.Math.Clamp(dx, -80, 80);
       boss.setVelocityX(vx);
     });
   }
