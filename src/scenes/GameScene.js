@@ -73,11 +73,14 @@ export default class GameScene extends Phaser.Scene {
     this.level3SmallSpawnCount = 0;
     this.finalBossSpawnThreshold = 10;
     this.destroyVictoryUI();
+    this.trackShuffleTimer?.remove();
+    this.trackShuffleTimer = null;
+    this.firstShuffleDone = false;
 
     this.deathCause = null;
 
 
-    // ✅ Reiniciar el flag del sonido de victoria aquí
+    // ? Reiniciar el flag del sonido de victoria aquí
     this.winSoundPlayed = false;
 
     this.destroyBossCountdownUI();
@@ -98,6 +101,12 @@ export default class GameScene extends Phaser.Scene {
     this.allEnemies = this.physics.add.group({ runChildUpdate: true, allowGravity: false });
     this.allPlayerProjectiles = this.physics.add.group({ runChildUpdate: true, allowGravity: false });
     this.allEnemyProjectiles = this.physics.add.group({ runChildUpdate: true, allowGravity: false });
+
+    // Configuración de carriles
+    this.trackConfigs = [];
+    this.trackShuffleTimer = null;
+    this.activeTrackCount = 2;
+    this.firstShuffleDone = false;
 
     // Crear pistas
     this.tracks = [
@@ -159,9 +168,6 @@ export default class GameScene extends Phaser.Scene {
         track.setDifficulty({ spawnMin, spawnMax });
       } else if (typeof track.setSpawnRange === 'function') {
         track.setSpawnRange(spawnMin, spawnMax);
-      } else {
-        track.stop?.();
-        track.start(spawnMin, spawnMax);
       }
 
       if (typeof track.setEnemySpeeds === 'function') {
@@ -169,6 +175,14 @@ export default class GameScene extends Phaser.Scene {
       }
     });
 
+    // Actualizar configuración base para el shuffle aleatorio
+    this.trackConfigs = this.tracks.map(track => ({ track, min: spawnMin, max: spawnMax }));
+    this.runRandomTrackSpawns();
+  }
+
+  stopTrackShuffle() {
+    this.trackShuffleTimer?.remove();
+    this.trackShuffleTimer = null;
   }
 
   playLevelTransition({ duration = 600, onMidpoint, onComplete } = {}) {
@@ -251,6 +265,7 @@ export default class GameScene extends Phaser.Scene {
 
       this.backgroundImage?.setTexture('esenario2');
 
+      this.activeTrackCount = 3;
       this.adjustDifficulty({
         spawnMin: 1500,
         spawnMax: 3000,
@@ -298,6 +313,7 @@ export default class GameScene extends Phaser.Scene {
       this.tracks.forEach(track => track.stop());
 
       // Ajustar dificultad
+      this.activeTrackCount = 3;
       this.adjustDifficulty({
         spawnMin: 800,
         spawnMax: 2000,
@@ -306,16 +322,6 @@ export default class GameScene extends Phaser.Scene {
         enemySpeedBig: 130
       });
 
-      // Reiniciar explícitamente cada track
-      this.tracks.forEach((track, index) => {
-        const baseDelay = 800;
-        const maxDelay = 2000;
-        // Escalonar los delays para evitar que todos spawnen a la vez
-        track.start(
-          baseDelay + (index * 200),
-          maxDelay + (index * 200)
-        );
-      });
 
       // Reiniciar contadores del boss
       this.level3SmallSpawnCount = 0;
@@ -375,6 +381,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.finalBossSpawned) return;
     this.finalBossSpawned = true;
     this.updateBossCountdownText();
+    this.stopTrackShuffle();
     this.tracks.forEach(track => track.stop());
 
     const laneYs = this.tracks.map(track => track?.y).filter(y => typeof y === 'number');
@@ -471,7 +478,7 @@ export default class GameScene extends Phaser.Scene {
   startBossAttackLoop(boss) {
     const timer = this.time.addEvent({
       delay: Phaser.Math.Between(2000, 3200),
-      callback: () => this.chooseBossAttack(boss), // ✅ Elegir qué ataque usar
+      callback: () => this.chooseBossAttack(boss), // ? Elegir qué ataque usar
       loop: true
     });
 
@@ -479,7 +486,7 @@ export default class GameScene extends Phaser.Scene {
     boss.attackTimer = timer;
   }
 
-  // ✅ NUEVO: Elige aleatoriamente entre el ataque normal y el especial
+  // ? NUEVO: Elige aleatoriamente entre el ataque normal y el especial
   chooseBossAttack(boss) {
     if (!boss || !boss.isAlive) return;
 
@@ -492,7 +499,7 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  // ✅ MODIFICADO: Ataque especial que dispara en 3 de 4 carriles, con aviso.
+  // ? MODIFICADO: Ataque especial que dispara en 3 de 4 carriles, con aviso.
   bossLaneAttack(boss) {
     if (!boss || !boss.isAlive || !this.player?.isAlive) return;
 
@@ -506,13 +513,13 @@ export default class GameScene extends Phaser.Scene {
     // 3. Crear indicadores visuales para los carriles de ataque (telegraphing)
     const indicators = [];
     attackLanes.forEach(track => {
-      // ✅ Añadir la línea roja de fondo
+      // ? Añadir la línea roja de fondo
       const laneIndicator = this.add.graphics({ fillStyle: { color: 0xff0000, alpha: 0.4 } });
       laneIndicator.fillRect(0, track.y - 80, this.scale.width, 160);
       laneIndicator.setDepth(9); // Un poco por detrás de la imagen
       indicators.push(laneIndicator);
 
-      // ✅ Añadir la imagen del indicador centrada
+      // ? Añadir la imagen del indicador centrada
       const imageIndicator = this.add.image(this.scale.width / 2, track.y, 'attack_indicator');
       imageIndicator.setOrigin(0.5, 0.5); // Centrar la imagen en su posición
       imageIndicator.setScale(0.2);
@@ -520,7 +527,7 @@ export default class GameScene extends Phaser.Scene {
       imageIndicator.setAlpha(0.7);
       indicators.push(imageIndicator);
 
-      // ✅ Animación de "pulso" para el indicador
+      // ? Animación de "pulso" para el indicador
       this.tweens.add({
         targets: [laneIndicator, imageIndicator], // Animar ambos indicadores
         alpha: 0.4,
@@ -610,13 +617,13 @@ export default class GameScene extends Phaser.Scene {
     // Ya verificamos que boss existe y está vivo, así que podemos llamar directamente a play
     boss.play('final_boss_attack');
     boss.once('animationcomplete', () => {
-      // ✅ Añadir verificación de que el jefe todavía existe en la escena
+      // ? Añadir verificación de que el jefe todavía existe en la escena
       if (boss && boss.isAlive && boss.scene) {
         boss.play('final_boss_idle');
       }
     });
 
-    // ✅ Disparar una ráfaga de proyectiles más rápidos
+    // ? Disparar una ráfaga de proyectiles más rápidos
     if (this.player?.isAlive) {
       const projectileCount = 3; // Número de proyectiles en la ráfaga
       const projectileDelay = 120; // Milisegundos entre cada proyectil
@@ -719,12 +726,12 @@ hitEnemy(projectile, enemy) {
             Phaser.Utils.Array.Remove(this.bossHealthTexts, enemy.healthText);
           }
 
-          // 🧩 Asegura que se elimine de la lista de bosses
+          // ?? Asegura que se elimine de la lista de bosses
           Phaser.Utils.Array.Remove(this.finalBosses, enemy);
 
-          // ✅ Si ya no quedan jefes, muestra la pantalla de victoria
+          // ? Si ya no quedan jefes, muestra la pantalla de victoria
           if (this.finalBosses.length === 0) {
-            console.log('🎉 Jefe final derrotado — mostrando pantalla de victoria');
+            console.log('?? Jefe final derrotado — mostrando pantalla de victoria');
  
             // Detener la música de fondo actual
             if (this.level3Music?.isPlaying) this.level3Music.stop();
@@ -750,7 +757,7 @@ hitEnemy(projectile, enemy) {
   // Enemigos normales
   enemy.hit();
 
-  // ✅ Otorgar puntos SOLO si el enemigo es derrotado en este golpe.
+  // ? Otorgar puntos SOLO si el enemigo es derrotado en este golpe.
   if (!enemy.isAlive) {
     const points = enemy.size === 'Small' ? 5 : 10;
     this.addScore(points);
@@ -772,12 +779,52 @@ hitEnemy(projectile, enemy) {
     this.tweens.add({ targets: this.infoPanel, y: 700, alpha: 0, duration: 500, ease: 'Power2' });
     this.player.start();
 
-    this.tracks[0].start(3000, 5000);
-    this.tracks[1].start(2000, 4000);
-    this.tracks[2].start(4000, 6000);
-    this.tracks[3].start(5000, 7000);
+    this.trackConfigs = [
+      { track: this.tracks[0], min: 3000, max: 5000 },
+      { track: this.tracks[1], min: 2000, max: 4000 },
+      { track: this.tracks[2], min: 4000, max: 6000 },
+      { track: this.tracks[3], min: 5000, max: 7000 }
+    ];
+
+    this.activeTrackCount = 2; // Solo mantener activos 2 carriles al mismo tiempo
+    this.runRandomTrackSpawns();
 
     this.input.keyboard.once('keydown-ESC', () => this.scene.start('MenuScene'));
+  }
+
+  runRandomTrackSpawns() {
+    if (!this.trackConfigs?.length) return;
+
+    const shuffleAndStart = () => {
+      const shuffled = Phaser.Utils.Array.Shuffle([...this.trackConfigs]);
+      const chosen = shuffled.slice(0, Math.min(this.activeTrackCount, shuffled.length));
+      const rest = shuffled.slice(chosen.length);
+
+      // Pausar solo los timers de los no elegidos (sin borrar enemigos vivos)
+      rest.forEach(cfg => cfg.track?.pauseSpawns?.());
+
+      // Arrancar o reanudar solo los carriles seleccionados con un pequeño retraso aleatorio
+      chosen.forEach((cfg, index) => {
+        const delay = Phaser.Math.Between(200, 1200) + index * 180;
+        const fn = this.firstShuffleDone ? 'resumeSpawns' : 'start';
+        this.time.delayedCall(delay, () => cfg.track?.[fn]?.(cfg.min, cfg.max));
+      });
+    };
+
+    shuffleAndStart();
+    this.firstShuffleDone = true;
+
+    // Repetir el shuffle cada pocos segundos para que los carriles activos cambien dinámicamente
+    this.trackShuffleTimer?.remove();
+    this.trackShuffleTimer = this.time.addEvent({
+      delay: Phaser.Math.Between(5500, 8500),
+      loop: true,
+      callback: () => {
+        if (!this.player?.isAlive) return;
+        shuffleAndStart();
+        this.trackShuffleTimer.delay = Phaser.Math.Between(5500, 8500);
+      }
+    });
   }
 
   update() {
@@ -826,17 +873,17 @@ hitEnemy(projectile, enemy) {
 
  hitPlayer(player, enemyProj) {
     if (!player?.isAlive || !player?.active) {
-        console.warn('⚠️ Colisión ignorada: jugador no válido');
+        console.warn('?? Colisión ignorada: jugador no válido');
         return;
     }
     
     if (!enemyProj?.active || !enemyProj?.visible) {
-        console.warn('⚠️ Colisión ignorada: proyectil no válido');
+        console.warn('?? Colisión ignorada: proyectil no válido');
         return;
     }
 
-    // 🔍 LOG DETALLADO
-    console.error('💥 JUGADOR GOLPEADO por proyectil:', {
+    // ?? LOG DETALLADO
+    console.error('?? JUGADOR GOLPEADO por proyectil:', {
         proyectilX: Math.round(enemyProj.x),
         proyectilY: Math.round(enemyProj.y),
         jugadorX: Math.round(player.x),
@@ -984,18 +1031,18 @@ hitEnemy(projectile, enemy) {
 
 
   gameOver(cause = 'DESCONOCIDO') {
-  // 🔍 LOG CRÍTICO PARA IDENTIFICAR CAUSA
-  console.error('🚨 GAME OVER ACTIVADO');
-  console.error('📍 Causa:', cause);
-  console.error('🎮 Estado del jugador:', {
+  // ?? LOG CRÍTICO PARA IDENTIFICAR CAUSA
+  console.error('?? GAME OVER ACTIVADO');
+  console.error('?? Causa:', cause);
+  console.error('?? Estado del jugador:', {
     x: this.player?.x,
     y: this.player?.y,
     isAlive: this.player?.isAlive,
     visible: this.player?.visible
   });
   
-  // 🔍 LOG DE ENEMIGOS ACTIVOS
-  console.error('👾 Enemigos activos:', 
+  // ?? LOG DE ENEMIGOS ACTIVOS
+  console.error('?? Enemigos activos:', 
     this.allEnemies.children.entries
       .filter(e => e.active)
       .map(e => ({
@@ -1007,8 +1054,8 @@ hitEnemy(projectile, enemy) {
       }))
   );
   
-  // 🔍 LOG DE PROYECTILES ENEMIGOS ACTIVOS
-  console.error('💥 Proyectiles enemigos activos:', 
+  // ?? LOG DE PROYECTILES ENEMIGOS ACTIVOS
+  console.error('?? Proyectiles enemigos activos:', 
     this.allEnemyProjectiles.children.entries
       .filter(p => p.active)
       .map(p => ({
@@ -1017,9 +1064,9 @@ hitEnemy(projectile, enemy) {
       }))
   );
   
-  // 🔍 LOG DE BOSSES
+  // ?? LOG DE BOSSES
   if (this.finalBosses.length > 0) {
-    console.error('👹 Jefes activos:', 
+    console.error('?? Jefes activos:', 
       this.finalBosses.map(b => ({
         x: Math.round(b.x),
         y: Math.round(b.y),
@@ -1033,6 +1080,7 @@ hitEnemy(projectile, enemy) {
   this.deathCause = cause;
   // Detiene todo
   this.tracks.forEach(track => track.stop());
+  this.stopTrackShuffle();
   this.sound.stopAll();
   this.sound.play('gameover', { volume: 1 });
 
@@ -1198,3 +1246,4 @@ hitEnemy(projectile, enemy) {
     this.victoryShown = false;
   }
 }
+
