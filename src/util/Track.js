@@ -1,4 +1,4 @@
-﻿// Track.js — Versión corregida, optimizada y compatible con tu juego
+﻿// Track.js — Versión final corregida y compatible con tu sistema actual
 
 import Enemy from '../entities/Enemy.js';
 import PlayerShoot from '../entities/PlayerShoot.js';
@@ -16,22 +16,33 @@ export default class Track {
       .setOrigin(1.3, 1)
       .setScale(0.1);
 
-    // GRUPO DINÁMICO DE ENEMIGOS (permite MUCHOS por carril)
+    // Grupo dinámico para permitir muchos enemigos en un carril
     this.enemies = scene.physics.add.group({
       runChildUpdate: true,
       allowGravity: false
     });
 
-    // Tiempos base
-    this.currentMinDelay = 9000;
-    this.currentMaxDelay = 1500;
-
+    // Spawns
+    this.currentMinDelay = 8000;
+    this.currentMaxDelay = 12000;
     this.spawnTimer = null;
+
+    // Velocidades por defecto
+    this.enemySpeedSmall = 120;
+    this.enemySpeedBig = 90;
   }
 
-  // ===========================
-  // 🔥 CREA UN ENEMIGO
-  // ===========================
+  // =====================================================
+  // 🔥 Cambiar velocidad de los enemigos (desde GameScene)
+  // =====================================================
+  setEnemySpeeds({ small, big }) {
+    this.enemySpeedSmall = small;
+    this.enemySpeedBig = big;
+  }
+
+  // =====================================================
+  // 🔥 Crear enemigo nuevo o reutilizado
+  // =====================================================
   spawnEnemy(size) {
     let enemy = this.enemies.getFirstDead();
 
@@ -42,9 +53,16 @@ export default class Track {
 
     enemy.size = size;
     enemy.currentTrack = this;
+
+    // ⭐ APLICAR VELOCIDAD SEGÚN EL NIVEL
+    enemy.speed = (size === "Small")
+      ? this.enemySpeedSmall
+      : this.enemySpeedBig;
+
     enemy.start();
   }
 
+  // =====================================================
   pauseSpawns() {
     if (this.spawnTimer) {
       this.spawnTimer.remove();
@@ -52,52 +70,49 @@ export default class Track {
     }
   }
 
-  // ===========================
-  // 🔥 REANUDAR SPawns
-  // ===========================
+  // =====================================================
+  // 🔥 Control de spawns aleatorios
+  // =====================================================
   resumeSpawns(min = this.currentMinDelay, max = this.currentMaxDelay) {
     this.currentMinDelay = min;
     this.currentMaxDelay = max;
 
-    const delayFn = () => Phaser.Math.Between(min, max);
+    const getDelay = () => Phaser.Math.Between(min, max);
 
     this.spawnTimer = this.scene.time.addEvent({
-  delay: delayFn(),
-  loop: true,
-  callback: () => {
-    if (!this.scene || !this.spawnTimer) return;
+      delay: getDelay(),
+      loop: true,
+      callback: () => {
+        if (!this.scene || !this.spawnTimer) return;
 
-    // Evitar amontonamientos (si un enemigo está muy cerca del inicio)
-    const nearest = this.enemies.getChildren().some(e =>
-      e.active &&
-      e.isAlive &&
-      e.x < 200 // si hay un gato recién salido, NO sacar otro encima
-    );
+        // Evitar que dos enemigos salgan pegados
+        const tooClose = this.enemies.getChildren().some(e =>
+          e.active && e.isAlive && e.x < 240
+        );
 
-    if (nearest) {
-      this.spawnTimer.delay = Phaser.Math.Between(min, max);
-      return;
-    }
+        if (tooClose) {
+          this.spawnTimer.delay = getDelay();
+          return;
+        }
 
-    // Spawn normal
-    const type = Phaser.Math.Between(0, 100) < 70 ? 'Small' : 'Big';
+        // Tipo de enemigo (70% pequeño, 30% grande)
+        const type = Phaser.Math.Between(0, 100) < 70 ? "Small" : "Big";
 
-    // DESFASE natural para evitar que todos los carriles spawn al mismo tiempo
-    const offset = Phaser.Math.Between(120, 450);
+        // Desfase natural para evitar que 4 carriles spawneen juntos
+        const offset = Phaser.Math.Between(120, 450);
 
-    this.scene.time.delayedCall(offset, () => {
-      this.spawnEnemy(type);
+        this.scene.time.delayedCall(offset, () => {
+          this.spawnEnemy(type);
+        });
+
+        this.spawnTimer.delay = getDelay();
+      }
     });
-
-    this.spawnTimer.delay = delayFn();
-  }
-});
-
   }
 
-  // ===========================
-  // 🔥 CAMBIO DE DIFICULTAD
-  // ===========================
+  // =====================================================
+  // 🔥 Cambiar dificultad desde GameScene
+  // =====================================================
   setDifficulty({ spawnMin, spawnMax }) {
     this.currentMinDelay = spawnMin;
     this.currentMaxDelay = spawnMax;
@@ -105,50 +120,48 @@ export default class Track {
     this.resumeSpawns(spawnMin, spawnMax);
   }
 
-  // ===========================
-  // 🔥 INICIO DE CARRIL
-  // ===========================
+  // =====================================================
+  // 🔥 Iniciar el carril
+  // =====================================================
   start(minDelay, maxDelay, options = {}) {
     this.stop();
 
     this.currentMinDelay = minDelay;
     this.currentMaxDelay = maxDelay;
 
-    // Spawn inicial (uno pequeño y uno grande)
-    // Spawn inicial aleatorio y solo 1 gato
-const type = Phaser.Math.Between(0, 100) < 70 ? 'Small' : 'Big';
+    // Un solo gato inicial por carril (aleatorio)
+    const type = Phaser.Math.Between(0, 100) < 70 ? "Small" : "Big";
 
-this.scene.time.delayedCall(
-  Phaser.Math.Between(400, 1600),   // cada carril inicia en diferente tiempo
-  () => this.spawnEnemy(type)
-);
-
+    this.scene.time.delayedCall(
+      Phaser.Math.Between(400, 1600),
+      () => this.spawnEnemy(type)
+    );
 
     this.resumeSpawns(minDelay, maxDelay);
   }
 
-  // ===========================
-  // 🔥 DETENER CARRIL
-  // ===========================
+  // =====================================================
+  // 🔥 Detener carril
+  // =====================================================
   stop() {
     this.pauseSpawns();
-
-    this.enemies.children.each(e => {
-      if (e.stop) e.stop();
-    });
+    this.enemies.children.each(e => e.stop?.());
   }
 
-  // ===========================
-  // DISPAROS
-  // ===========================
+  // =====================================================
+  // Disparos del jugador
+  // =====================================================
   throwPlayerSnowball(x) {
-    const snowball = new PlayerShoot(this.scene, 0, 0, 'projectile');
+    const snowball = new PlayerShoot(this.scene, 0, 0, "projectile");
     this.scene.allPlayerProjectiles.add(snowball);
     snowball.fire(x, this.y);
   }
 
+  // =====================================================
+  // Disparos del enemigo
+  // =====================================================
   throwEnemySnowball(x) {
-    const snowball = new EnemyShoot(this.scene, x, this.y, 'projectileEnemy');
+    const snowball = new EnemyShoot(this.scene, x, this.y, "projectileEnemy");
     this.scene.allEnemyProjectiles.add(snowball);
     snowball.fire(x, this.y);
   }
