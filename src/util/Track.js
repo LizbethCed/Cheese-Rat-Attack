@@ -34,6 +34,57 @@ export default class Track {
     this.currentMaxDelay = 6000;
   }
 
+  // Detiene solo los timers de spawn sin quitar enemigos vivos
+  pauseSpawns() {
+    if (this.releaseTimerSmall) {
+      this.releaseTimerSmall.remove();
+      this.releaseTimerSmall = null;
+    }
+    if (this.releaseTimerBig) {
+      this.releaseTimerBig.remove();
+      this.releaseTimerBig = null;
+    }
+  }
+
+  // Reanuda timers respetando enemigos ya presentes
+  resumeSpawns(minDelay = this.currentMinDelay, maxDelay = this.currentMaxDelay) {
+    this.currentMinDelay = minDelay;
+    this.currentMaxDelay = maxDelay;
+    const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
+
+    if (this.releaseTimerSmall) {
+      this.releaseTimerSmall.delay = getDelay();
+    } else {
+      this.releaseTimerSmall = this.scene.time.addEvent({
+        delay: getDelay(),
+        callback: () => {
+          if (!this.releaseTimerSmall || !this.scene) return;
+          if (this.snowmanSmall && !this.snowmanSmall.isAlive) {
+            this.snowmanSmall.start();
+          }
+          if (this.releaseTimerSmall) this.releaseTimerSmall.delay = getDelay();
+        },
+        loop: true
+      });
+    }
+
+    if (this.releaseTimerBig) {
+      this.releaseTimerBig.delay = getDelay();
+    } else {
+      this.releaseTimerBig = this.scene.time.addEvent({
+        delay: getDelay(),
+        callback: () => {
+          if (!this.releaseTimerBig || !this.scene) return;
+          if (this.snowmanBig && !this.snowmanBig.isAlive) {
+            this.snowmanBig.start();
+          }
+          if (this.releaseTimerBig) this.releaseTimerBig.delay = getDelay();
+        },
+        loop: true
+      });
+    }
+  }
+
   setEnemySpeeds({ small, big }) {
     if (typeof small === 'number') {
       this.snowmanSmall.speed = small;
