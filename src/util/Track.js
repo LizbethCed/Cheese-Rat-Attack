@@ -1,4 +1,4 @@
-﻿// Track.js - Versión difícil / spawns rápidos / anti-spawn pegado
+﻿// Track.js — Versión corregida, optimizada y compatible con tu juego
 
 import Enemy from '../entities/Enemy.js';
 import PlayerShoot from '../entities/PlayerShoot.js';
@@ -10,181 +10,137 @@ export default class Track {
     this.id = id;
     this.y = trackY;
 
+    // Casa del gato
     this.nest = scene.physics.add
       .image(1024, trackY - 10, 'nest')
       .setOrigin(1.3, 1)
       .setScale(0.1);
 
-    this.snowmanBig = new Enemy(scene, this, 'Big');
-    this.snowmanSmall = new Enemy(scene, this, 'Small');
+    // GRUPO DINÁMICO DE ENEMIGOS (permite MUCHOS por carril)
+    this.enemies = scene.physics.add.group({
+      runChildUpdate: true,
+      allowGravity: false
+    });
 
-    if (scene.allEnemies) {
-      scene.allEnemies.add(this.snowmanBig);
-      scene.allEnemies.add(this.snowmanSmall);
+    // Tiempos base
+    this.currentMinDelay = 9000;
+    this.currentMaxDelay = 1500;
+
+    this.spawnTimer = null;
+  }
+
+  // ===========================
+  // 🔥 CREA UN ENEMIGO
+  // ===========================
+  spawnEnemy(size) {
+    let enemy = this.enemies.getFirstDead();
+
+    if (!enemy) {
+      enemy = new Enemy(this.scene, this, size);
+      this.enemies.add(enemy);
     }
 
-    this.releaseTimerSmall = null;
-    this.releaseTimerBig = null;
-
-    this.currentMinDelay = 400;   // 🚀 Spawns muy rápidos
-    this.currentMaxDelay = 1000;
+    enemy.size = size;
+    enemy.currentTrack = this;
+    enemy.start();
   }
 
   pauseSpawns() {
-    if (this.releaseTimerSmall) {
-      this.releaseTimerSmall.remove();
-      this.releaseTimerSmall = null;
-    }
-    if (this.releaseTimerBig) {
-      this.releaseTimerBig.remove();
-      this.releaseTimerBig = null;
+    if (this.spawnTimer) {
+      this.spawnTimer.remove();
+      this.spawnTimer = null;
     }
   }
 
-  resumeSpawns(minDelay = this.currentMinDelay, maxDelay = this.currentMaxDelay) {
-    this.currentMinDelay = minDelay;
-    this.currentMaxDelay = maxDelay;
+  // ===========================
+  // 🔥 REANUDAR SPawns
+  // ===========================
+  resumeSpawns(min = this.currentMinDelay, max = this.currentMaxDelay) {
+    this.currentMinDelay = min;
+    this.currentMaxDelay = max;
 
-    const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
+    const delayFn = () => Phaser.Math.Between(min, max);
 
-    // --- SMALL ---
-    this.releaseTimerSmall = this.scene.time.addEvent({
-      delay: getDelay(),
-      callback: () => {
-        if (!this.releaseTimerSmall || !this.scene) return;
+    this.spawnTimer = this.scene.time.addEvent({
+  delay: delayFn(),
+  loop: true,
+  callback: () => {
+    if (!this.scene || !this.spawnTimer) return;
 
-        if (this.snowmanSmall && !this.snowmanSmall.isAlive) {
-          this.snowmanSmall.start();
+    // Evitar amontonamientos (si un enemigo está muy cerca del inicio)
+    const nearest = this.enemies.getChildren().some(e =>
+      e.active &&
+      e.isAlive &&
+      e.x < 200 // si hay un gato recién salido, NO sacar otro encima
+    );
 
-          // 🔥 Anti-spawn pegado
-          if (this.releaseTimerBig) {
-            this.releaseTimerBig.delay += Phaser.Math.Between(500, 1200);
-          }
-        }
+    if (nearest) {
+      this.spawnTimer.delay = Phaser.Math.Between(min, max);
+      return;
+    }
 
-        this.releaseTimerSmall.delay = getDelay();
-      },
-      loop: true
+    // Spawn normal
+    const type = Phaser.Math.Between(0, 100) < 70 ? 'Small' : 'Big';
+
+    // DESFASE natural para evitar que todos los carriles spawn al mismo tiempo
+    const offset = Phaser.Math.Between(120, 450);
+
+    this.scene.time.delayedCall(offset, () => {
+      this.spawnEnemy(type);
     });
 
-    // --- BIG ---
-    this.releaseTimerBig = this.scene.time.addEvent({
-      delay: getDelay(),
-      callback: () => {
-        if (!this.releaseTimerBig || !this.scene) return;
+    this.spawnTimer.delay = delayFn();
+  }
+});
 
-        if (this.snowmanBig && !this.snowmanBig.isAlive) {
-          this.snowmanBig.start();
-
-          // 🔥 Anti-spawn pegado
-          if (this.releaseTimerSmall) {
-            this.releaseTimerSmall.delay += Phaser.Math.Between(500, 1200);
-          }
-        }
-
-        this.releaseTimerBig.delay = getDelay();
-      },
-      loop: true
-    });
   }
 
+  // ===========================
+  // 🔥 CAMBIO DE DIFICULTAD
+  // ===========================
   setDifficulty({ spawnMin, spawnMax }) {
     this.currentMinDelay = spawnMin;
     this.currentMaxDelay = spawnMax;
-
-    // 🧨 IMPORTANTE: aplicar los nuevos tiempos
     this.pauseSpawns();
     this.resumeSpawns(spawnMin, spawnMax);
   }
 
+  // ===========================
+  // 🔥 INICIO DE CARRIL
+  // ===========================
   start(minDelay, maxDelay, options = {}) {
-    const { initialSpawnMode = "both", initialDelayRange = null } = options;
-
     this.stop();
 
     this.currentMinDelay = minDelay;
     this.currentMaxDelay = maxDelay;
 
-    const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
+    // Spawn inicial (uno pequeño y uno grande)
+    // Spawn inicial aleatorio y solo 1 gato
+const type = Phaser.Math.Between(0, 100) < 70 ? 'Small' : 'Big';
 
-    const startWithOptionalDelay = (enemy) => {
-      if (initialDelayRange && Array.isArray(initialDelayRange)) {
-        const [dMin, dMax] = initialDelayRange;
-        const delay = Phaser.Math.Between(dMin || 0, dMax || 0);
+this.scene.time.delayedCall(
+  Phaser.Math.Between(400, 1600),   // cada carril inicia en diferente tiempo
+  () => this.spawnEnemy(type)
+);
 
-        this.scene.time.delayedCall(delay, () => {
-          if (enemy && !enemy.isAlive) enemy.start();
-        });
 
-      } else {
-        if (!enemy.isAlive) enemy.start();
-      }
-    };
-
-    if (initialSpawnMode === "randomOne") {
-      const pickSmall = Phaser.Math.Between(0, 1) === 0;
-      startWithOptionalDelay(pickSmall ? this.snowmanSmall : this.snowmanBig);
-    } else {
-      startWithOptionalDelay(this.snowmanSmall);
-      startWithOptionalDelay(this.snowmanBig);
-    }
-
-    // Timers
-    this.releaseTimerSmall = this.scene.time.addEvent({
-      delay: getDelay(),
-      callback: () => {
-        if (!this.releaseTimerSmall) return;
-
-        if (this.snowmanSmall && !this.snowmanSmall.isAlive) {
-          this.snowmanSmall.start();
-
-          if (this.releaseTimerBig) {
-            this.releaseTimerBig.delay += Phaser.Math.Between(500, 1200);
-          }
-        }
-
-        this.releaseTimerSmall.delay = getDelay();
-      },
-      loop: true
-    });
-
-    this.releaseTimerBig = this.scene.time.addEvent({
-      delay: getDelay(),
-      callback: () => {
-        if (!this.releaseTimerBig) return;
-
-        if (this.snowmanBig && !this.snowmanBig.isAlive) {
-          this.snowmanBig.start();
-
-          if (this.releaseTimerSmall) {
-            this.releaseTimerSmall.delay += Phaser.Math.Between(500, 1200);
-          }
-        }
-
-        this.releaseTimerBig.delay = getDelay();
-      },
-      loop: true
-    });
+    this.resumeSpawns(minDelay, maxDelay);
   }
 
+  // ===========================
+  // 🔥 DETENER CARRIL
+  // ===========================
   stop() {
-    if (this.releaseTimerSmall) {
-      this.releaseTimerSmall.remove();
-      this.releaseTimerSmall = null;
-    }
-    if (this.releaseTimerBig) {
-      this.releaseTimerBig.remove();
-      this.releaseTimerBig = null;
-    }
+    this.pauseSpawns();
 
-    if (this.snowmanSmall) this.snowmanSmall.stop();
-    if (this.snowmanBig) this.snowmanBig.stop();
+    this.enemies.children.each(e => {
+      if (e.stop) e.stop();
+    });
   }
 
-  restart() {
-    this.start(this.currentMinDelay, this.currentMaxDelay);
-  }
-
+  // ===========================
+  // DISPAROS
+  // ===========================
   throwPlayerSnowball(x) {
     const snowball = new PlayerShoot(this.scene, 0, 0, 'projectile');
     this.scene.allPlayerProjectiles.add(snowball);
@@ -193,8 +149,6 @@ export default class Track {
 
   throwEnemySnowball(x) {
     const snowball = new EnemyShoot(this.scene, x, this.y, 'projectileEnemy');
-    this.scene.add.existing(snowball);
-    this.scene.physics.add.existing(snowball);
     this.scene.allEnemyProjectiles.add(snowball);
     snowball.fire(x, this.y);
   }

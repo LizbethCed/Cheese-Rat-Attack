@@ -270,25 +270,28 @@ export default class GameScene extends Phaser.Scene {
   reachSecondLevel() {
     this.level2Reached = true;
 
-    const applyChanges = () => {
-      this.level1Music?.stop();
-      if (!this.level2Music) {
-        this.level2Music = this.sound.add('nivel2', { loop: true, volume: 0.9 });
-      }
-      this.level2Music.play();
+  const applyChanges = () => {
+  this.level1Music?.stop();
+  if (!this.level2Music) {
+    this.level2Music = this.sound.add('nivel2', { loop: true, volume: 0.9 });
+  }
+  this.level2Music.play();
 
-      this.backgroundImage?.setTexture('esenario2');
+  this.backgroundImage?.setTexture('esenario2');
 
-      this.activeTrackCount = 3;
-      this.adjustDifficulty({
-        spawnMin: 650,
-        spawnMax: 1150,
-        timeScale: 1.25,
-        enemySpeedSmall: 175,
-        enemySpeedBig: 140
-      });
+  // Activar 4 carriles pero evitando amontonamiento
+  this.activeTrackCount = 4; // 3 activos a la vez evita colisiones masivas
 
-    };
+  // NIVEL 2: un poquito más rápido, pero sin excesos
+  this.adjustDifficulty({
+    spawnMin: 1200,
+    spawnMax: 2300,
+    timeScale: 1.25,
+     enemySpeedSmall: 220,   // MÁS RÁPIDO
+  enemySpeedBig: 180   
+});
+
+};
 
     const announce = () => {
       this.showLevelBanner({
@@ -801,14 +804,18 @@ hitEnemy(projectile, enemy) {
     this.tweens.add({ targets: this.infoPanel, y: 700, alpha: 0, duration: 500, ease: 'Power2' });
     this.player.start();
 
-    this.trackConfigs = [
-      { track: this.tracks[0], min: 1000, max: 1800, options: { initialSpawnMode: 'randomOne', initialDelayRange: [200, 800] } },
-      { track: this.tracks[1], min: 950, max: 1750, options: { initialSpawnMode: 'randomOne', initialDelayRange: [200, 800] } },
-      { track: this.tracks[2], min: 1100, max: 1900, options: { initialSpawnMode: 'randomOne', initialDelayRange: [200, 800] } },
-      { track: this.tracks[3], min: 1200, max: 2000, options: { initialSpawnMode: 'randomOne', initialDelayRange: [200, 800] } }
-    ];
+// Nivel 1 — SUPER SUPER LENTO
+this.trackConfigs = [
+  { track: this.tracks[0], min: 7000, max: 11000, options: { initialSpawnMode: 'randomOne', initialDelayRange: [1200, 2500] } },
+  { track: this.tracks[1], min: 7500, max: 11500, options: { initialSpawnMode: 'randomOne', initialDelayRange: [1200, 2500] } },
+  { track: this.tracks[2], min: 7800, max: 12000, options: { initialSpawnMode: 'randomOne', initialDelayRange: [1200, 2500] } },
+  { track: this.tracks[3], min: 8000, max: 13000, options: { initialSpawnMode: 'randomOne', initialDelayRange: [1200, 2500] } }
+];
 
-    this.activeTrackCount = 3; // Mantener 3 carriles activos (no los 4) para más gatos chicos
+
+// Nivel 1: activar los 4 carriles pero MUY lento
+this.activeTrackCount = 4;
+// Mantener 3 carriles activos (no los 4) para más gatos chicos
     this.runRandomTrackSpawns();
 
     this.input.keyboard.once('keydown-ESC', () => this.scene.start('MenuScene'));
@@ -829,7 +836,8 @@ hitEnemy(projectile, enemy) {
       // Arrancar o reanudar solo los carriles seleccionados con un pequeño retraso aleatorio
       chosen.forEach((cfg, index) => {
         const delay = Phaser.Math.Between(200, 1200) + index * 180;
-        const fn = this.firstShuffleDone ? 'resumeSpawns' : 'start';
+         const fn = this.firstShuffleDone ? 'resumeSpawns' : 'start';
+
         const timer = this.time.delayedCall(delay, () => {
           if (!this.trackSpawnsEnabled) return;
           cfg.track?.[fn]?.(cfg.min, cfg.max, cfg.options);

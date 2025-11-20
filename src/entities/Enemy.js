@@ -31,7 +31,7 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.isThrowing = false;
     this.size = size;
-    this.speed = 80; // Aumenta este valor para que avancen más rápido (ej: 80)
+    this.speed = 70; // Aumenta este valor para que avancen más rápido (ej: 80)
     this.isBoss = false;
 
     // ✅ AÑADIR SISTEMA DE VIDA
@@ -59,8 +59,20 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
     });
   }
-
 start() {
+
+  // 🔥 Reaplicar escala y hitbox correctamente al revivir
+  if (this.size === "Small") {
+    this.setScale(0.15);
+    this.body.setSize(900, 900);
+    this.body.setOffset(0, 10);
+  } else {
+    this.setScale(0.18);
+    this.body.setSize(980, 980);
+    this.body.setOffset(90, 10);
+  }
+
+  // ============ TUS LÍNEAS ORIGINALES ===================
   // ✅ LIMPIAR TIMERS ANTERIORES antes de crear nuevos
   if (this.chooseEvent) {
     this.chooseEvent.remove();
@@ -95,7 +107,6 @@ start() {
     const startX = this.size === "Small" ? 80 : -100;
     this.body.reset(startX, this.currentTrack.y);
 
-    // ✅ Re-añadir al grupo de físicas si no está
     if (this.scene.allEnemies && !this.scene.allEnemies.contains(this)) {
       this.scene.allEnemies.add(this);
     }
@@ -103,18 +114,15 @@ start() {
     this.body.setAllowGravity(false);
   }
 
-  // Velocidad hacia la DERECHA (positiva)
+  // Velocidad hacia la derecha
   this.setVelocityX(this.speed);
 
   if (this.scene && typeof this.scene.onEnemySpawn === 'function') {
     this.scene.onEnemySpawn(this);
   }
 
-  // ✅ CRÍTICO: Timer más largo para la primera acción
-  // Esto da tiempo al enemigo de entrar completamente en pantalla
-  // antes de poder disparar por primera vez
   const firstActionDelay = this.size === "Small" ? 2000 : 3000;
-  
+
   this.chooseEvent = this.time.delayedCall(
     Phaser.Math.Between(firstActionDelay, firstActionDelay + 2000),
     this.chooseAction,
@@ -122,6 +130,7 @@ start() {
     this
   );
 }
+
   chooseAction() {
     if (!this.isAlive) return;
 
