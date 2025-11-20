@@ -281,12 +281,13 @@ export default class GameScene extends Phaser.Scene {
 
       this.activeTrackCount = 3;
       this.adjustDifficulty({
-        spawnMin: 1200,
-        spawnMax: 2400,
-        timeScale: 1.15,
-        enemySpeedSmall: 135,
-        enemySpeedBig: 105
+        spawnMin: 650,
+        spawnMax: 1150,
+        timeScale: 1.25,
+        enemySpeedSmall: 175,
+        enemySpeedBig: 140
       });
+
     };
 
     const announce = () => {
@@ -329,11 +330,11 @@ export default class GameScene extends Phaser.Scene {
       // Ajustar dificultad
       this.activeTrackCount = 3;
       this.adjustDifficulty({
-        spawnMin: 750,
-        spawnMax: 1600,
-        timeScale: 1.3,
-        enemySpeedSmall: 170,
-        enemySpeedBig: 135
+        spawnMin: 600,
+        spawnMax: 1300,
+        timeScale: 1.35,
+        enemySpeedSmall: 185,
+        enemySpeedBig: 150
       });
 
 
@@ -801,10 +802,10 @@ hitEnemy(projectile, enemy) {
     this.player.start();
 
     this.trackConfigs = [
-      { track: this.tracks[0], min: 1600, max: 2600, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } },
-      { track: this.tracks[1], min: 1500, max: 2400, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } },
-      { track: this.tracks[2], min: 1800, max: 2800, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } },
-      { track: this.tracks[3], min: 2000, max: 3000, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } }
+      { track: this.tracks[0], min: 1000, max: 1800, options: { initialSpawnMode: 'randomOne', initialDelayRange: [200, 800] } },
+      { track: this.tracks[1], min: 950, max: 1750, options: { initialSpawnMode: 'randomOne', initialDelayRange: [200, 800] } },
+      { track: this.tracks[2], min: 1100, max: 1900, options: { initialSpawnMode: 'randomOne', initialDelayRange: [200, 800] } },
+      { track: this.tracks[3], min: 1200, max: 2000, options: { initialSpawnMode: 'randomOne', initialDelayRange: [200, 800] } }
     ];
 
     this.activeTrackCount = 3; // Mantener 3 carriles activos (no los 4) para más gatos chicos
@@ -843,12 +844,12 @@ hitEnemy(projectile, enemy) {
     // Repetir el shuffle cada pocos segundos para que los carriles activos cambien dinámicamente
     this.trackShuffleTimer?.remove();
     this.trackShuffleTimer = this.time.addEvent({
-      delay: Phaser.Math.Between(5500, 8500),
+      delay: Phaser.Math.Between(3200, 5200),
       loop: true,
       callback: () => {
         if (!this.player?.isAlive) return;
         shuffleAndStart();
-        this.trackShuffleTimer.delay = Phaser.Math.Between(5500, 8500);
+        this.trackShuffleTimer.delay = Phaser.Math.Between(3200, 5200);
       }
     });
   }
