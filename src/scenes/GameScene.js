@@ -43,7 +43,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossMaxHealth = 500; // Por ejemplo, para hacerlo más difícil
     this.totalFinalBosses = 1;
     this.finalBossSpawned = false;
-    this.level3SmallSpawnCount = 0;
+    this.level3SmallDefeated = 0;
     this.finalBossSpawnThreshold = 10;
     this.bossCountdownText = null;
     this.victoryShown = false;
@@ -70,11 +70,13 @@ export default class GameScene extends Phaser.Scene {
     this.bossHealthTexts = [];
     this.bossAttackTimers = [];
     this.finalBossSpawned = false;
-    this.level3SmallSpawnCount = 0;
+    this.level3SmallDefeated = 0;
     this.finalBossSpawnThreshold = 10;
     this.destroyVictoryUI();
     this.trackShuffleTimer?.remove();
     this.trackShuffleTimer = null;
+    this.trackSpawnCalls = [];
+    this.trackSpawnsEnabled = true;
     this.firstShuffleDone = false;
 
     this.deathCause = null;
@@ -105,7 +107,9 @@ export default class GameScene extends Phaser.Scene {
     // Configuración de carriles
     this.trackConfigs = [];
     this.trackShuffleTimer = null;
-    this.activeTrackCount = 2;
+    this.activeTrackCount = 3;
+    this.trackSpawnsEnabled = true;
+    this.trackSpawnCalls = [];
     this.firstShuffleDone = false;
 
     // Crear pistas
@@ -158,8 +162,8 @@ export default class GameScene extends Phaser.Scene {
       this.registry.set('highscore', this.highscore);
     }
 
-    if (!this.level2Reached && this.score >= 150) this.reachSecondLevel();
-    if (!this.level3Reached && this.score >= 300) this.reachThirdLevel();
+    if (!this.level2Reached && this.score >= 100) this.reachSecondLevel();
+    if (!this.level3Reached && this.score >= 200) this.reachThirdLevel();
   }
 
   adjustDifficulty({ spawnMin, spawnMax, timeScale, enemySpeedSmall, enemySpeedBig }) {
@@ -176,13 +180,23 @@ export default class GameScene extends Phaser.Scene {
     });
 
     // Actualizar configuración base para el shuffle aleatorio
-    this.trackConfigs = this.tracks.map(track => ({ track, min: spawnMin, max: spawnMax }));
+    this.trackConfigs = this.tracks.map(track => {
+      const existing = this.trackConfigs.find?.(cfg => cfg.track === track);
+      return {
+        track,
+        min: spawnMin,
+        max: spawnMax,
+        options: existing?.options
+      };
+    });
     this.runRandomTrackSpawns();
   }
 
   stopTrackShuffle() {
     this.trackShuffleTimer?.remove();
     this.trackShuffleTimer = null;
+    this.trackSpawnCalls?.forEach(t => t?.remove?.());
+    this.trackSpawnCalls = [];
   }
 
   playLevelTransition({ duration = 600, onMidpoint, onComplete } = {}) {
@@ -267,11 +281,11 @@ export default class GameScene extends Phaser.Scene {
 
       this.activeTrackCount = 3;
       this.adjustDifficulty({
-        spawnMin: 1500,
-        spawnMax: 3000,
+        spawnMin: 1200,
+        spawnMax: 2400,
         timeScale: 1.15,
-        enemySpeedSmall: 120,
-        enemySpeedBig: 100
+        enemySpeedSmall: 135,
+        enemySpeedBig: 105
       });
     };
 
@@ -315,16 +329,16 @@ export default class GameScene extends Phaser.Scene {
       // Ajustar dificultad
       this.activeTrackCount = 3;
       this.adjustDifficulty({
-        spawnMin: 800,
-        spawnMax: 2000,
-        timeScale: 1.25,
-        enemySpeedSmall: 160,
-        enemySpeedBig: 130
+        spawnMin: 750,
+        spawnMax: 1600,
+        timeScale: 1.3,
+        enemySpeedSmall: 170,
+        enemySpeedBig: 135
       });
 
 
       // Reiniciar contadores del boss
-      this.level3SmallSpawnCount = 0;
+      this.level3SmallDefeated = 0;
       this.finalBossSpawned = false;
       this.finalBosses = [];
       this.clearBossUI();
@@ -354,8 +368,8 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
-    const remaining = Math.max(0, this.finalBossSpawnThreshold - this.level3SmallSpawnCount);
-    const text = `Gatos chicos: ${this.level3SmallSpawnCount}/${this.finalBossSpawnThreshold}` +
+    const remaining = Math.max(0, this.finalBossSpawnThreshold - this.level3SmallDefeated);
+    const text = `Gatos chicos derrotados: ${this.level3SmallDefeated}/${this.finalBossSpawnThreshold}` +
       (remaining > 0 ? `\nFaltan ${remaining}` : '\n¡Listo!');
 
     if (!this.bossCountdownText) {
@@ -381,7 +395,9 @@ export default class GameScene extends Phaser.Scene {
     if (this.finalBossSpawned) return;
     this.finalBossSpawned = true;
     this.updateBossCountdownText();
+    this.trackSpawnsEnabled = false;
     this.stopTrackShuffle();
+    this.tracks.forEach(track => track.pauseSpawns?.());
     this.tracks.forEach(track => track.stop());
 
     const laneYs = this.tracks.map(track => track?.y).filter(y => typeof y === 'number');
@@ -599,14 +615,16 @@ export default class GameScene extends Phaser.Scene {
   }
 
   onEnemySpawn(enemy) {
+    // El conteo ahora se basa en derrotas, no en apariciones.
     if (!enemy) return;
     if (!this.level3Reached || this.finalBossSpawned) return;
     if (enemy.size !== 'Small') return;
+  }
 
-    this.level3SmallSpawnCount++;
+  incrementSmallDefeat() {
+    this.level3SmallDefeated++;
     this.updateBossCountdownText();
-
-    if (this.level3SmallSpawnCount >= this.finalBossSpawnThreshold) {
+    if (this.level3SmallDefeated >= this.finalBossSpawnThreshold) {
       this.spawnFinalBosses();
     }
   }
@@ -761,6 +779,9 @@ hitEnemy(projectile, enemy) {
   if (!enemy.isAlive) {
     const points = enemy.size === 'Small' ? 5 : 10;
     this.addScore(points);
+    if (this.level3Reached && !this.finalBossSpawned && enemy.size === 'Small') {
+      this.incrementSmallDefeat();
+    }
     // El sonido de muerte ya se reproduce dentro de enemy.hit()
     // this.sound.play('enemy_kill', { volume: 0.5 });
   }
@@ -780,22 +801,23 @@ hitEnemy(projectile, enemy) {
     this.player.start();
 
     this.trackConfigs = [
-      { track: this.tracks[0], min: 3000, max: 5000 },
-      { track: this.tracks[1], min: 2000, max: 4000 },
-      { track: this.tracks[2], min: 4000, max: 6000 },
-      { track: this.tracks[3], min: 5000, max: 7000 }
+      { track: this.tracks[0], min: 1600, max: 2600, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } },
+      { track: this.tracks[1], min: 1500, max: 2400, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } },
+      { track: this.tracks[2], min: 1800, max: 2800, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } },
+      { track: this.tracks[3], min: 2000, max: 3000, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } }
     ];
 
-    this.activeTrackCount = 2; // Solo mantener activos 2 carriles al mismo tiempo
+    this.activeTrackCount = 3; // Mantener 3 carriles activos (no los 4) para más gatos chicos
     this.runRandomTrackSpawns();
 
     this.input.keyboard.once('keydown-ESC', () => this.scene.start('MenuScene'));
   }
 
   runRandomTrackSpawns() {
-    if (!this.trackConfigs?.length) return;
+    if (!this.trackConfigs?.length || !this.trackSpawnsEnabled) return;
 
     const shuffleAndStart = () => {
+      if (!this.trackSpawnsEnabled) return;
       const shuffled = Phaser.Utils.Array.Shuffle([...this.trackConfigs]);
       const chosen = shuffled.slice(0, Math.min(this.activeTrackCount, shuffled.length));
       const rest = shuffled.slice(chosen.length);
@@ -807,7 +829,11 @@ hitEnemy(projectile, enemy) {
       chosen.forEach((cfg, index) => {
         const delay = Phaser.Math.Between(200, 1200) + index * 180;
         const fn = this.firstShuffleDone ? 'resumeSpawns' : 'start';
-        this.time.delayedCall(delay, () => cfg.track?.[fn]?.(cfg.min, cfg.max));
+        const timer = this.time.delayedCall(delay, () => {
+          if (!this.trackSpawnsEnabled) return;
+          cfg.track?.[fn]?.(cfg.min, cfg.max, cfg.options);
+        });
+        this.trackSpawnCalls.push(timer);
       });
     };
 
@@ -828,7 +854,14 @@ hitEnemy(projectile, enemy) {
   }
 
   update() {
+    this.ensureTrackSpawnsActive();
     this.updateBossChase();
+  }
+
+  ensureTrackSpawnsActive() {
+    if (this.finalBossSpawned || this.trackSpawnsEnabled) return;
+    this.trackSpawnsEnabled = true;
+    this.runRandomTrackSpawns();
   }
 
   updateBossChase() {
@@ -1081,6 +1114,7 @@ hitEnemy(projectile, enemy) {
   // Detiene todo
   this.tracks.forEach(track => track.stop());
   this.stopTrackShuffle();
+  this.trackSpawnsEnabled = false;
   this.sound.stopAll();
   this.sound.play('gameover', { volume: 1 });
 
@@ -1098,7 +1132,7 @@ hitEnemy(projectile, enemy) {
 
   this.clearBossUI();
   this.finalBossSpawned = false;
-  this.level3SmallSpawnCount = 0;
+  this.level3SmallDefeated = 0;
   this.finalBossSpawnThreshold = 10;
   this.destroyBossCountdownUI();
   this.destroyVictoryUI();
@@ -1246,4 +1280,7 @@ hitEnemy(projectile, enemy) {
     this.victoryShown = false;
   }
 }
+
+
+
 

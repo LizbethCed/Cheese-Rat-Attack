@@ -1,4 +1,4 @@
-// Track.js - Versión corregida con mejor manejo de timers
+﻿// Track.js - VersiÃ³n corregida con mejor manejo de timers
 
 import Enemy from '../entities/Enemy.js';
 import PlayerShoot from '../entities/PlayerShoot.js';
@@ -20,7 +20,7 @@ export default class Track {
     this.snowmanBig = new Enemy(scene, this, 'Big');
     this.snowmanSmall = new Enemy(scene, this, 'Small');
     
-    // ✅ Añadirlos al grupo GLOBAL de enemigos
+    // âœ… AÃ±adirlos al grupo GLOBAL de enemigos
     if (scene.allEnemies) {
       scene.allEnemies.add(this.snowmanBig);
       scene.allEnemies.add(this.snowmanSmall);
@@ -29,7 +29,7 @@ export default class Track {
     this.releaseTimerSmall = null;
     this.releaseTimerBig = null;
 
-    // ✅ NUEVO: Guardar configuración actual
+    // âœ… NUEVO: Guardar configuraciÃ³n actual
     this.currentMinDelay = 3000;
     this.currentMaxDelay = 6000;
   }
@@ -113,37 +113,53 @@ export default class Track {
     }
   }
 
-   start(minDelay, maxDelay) {
-    // ✅ CRÍTICO: Detener timers ANTES de crear nuevos
+     start(minDelay, maxDelay, options = {}) {
+    const {
+      initialSpawnMode = "both", // "both" | "randomOne"
+      initialDelayRange = null   // [min, max] ms or null for immediate
+    } = options;
+    // �o. CR�?TICO: Detener timers ANTES de crear nuevos
     this.stop();
 
-    // ✅ Guardar configuración
+    // �o. Guardar configuraci�n
     this.currentMinDelay = minDelay;
     this.currentMaxDelay = maxDelay;
 
-    // ✅ Iniciar enemigos inmediatamente (sin delay)
-    if (!this.snowmanSmall.isAlive) {
-      this.snowmanSmall.start();
-    }
-    if (!this.snowmanBig.isAlive) {
-      this.snowmanBig.start();
+    const startWithOptionalDelay = (enemy) => {
+      if (initialDelayRange && Array.isArray(initialDelayRange) && initialDelayRange.length === 2) {
+        const [dMin, dMax] = initialDelayRange;
+        const delay = Phaser.Math.Between(dMin || 0, dMax || 0);
+        this.scene.time.delayedCall(delay, () => {
+          if (enemy && !enemy.isAlive) enemy.start();
+        });
+      } else if (!enemy.isAlive) {
+        enemy.start();
+      }
+    };
+
+    if (initialSpawnMode === "randomOne") {
+      const pickSmall = Phaser.Math.Between(0, 1) === 0;
+      startWithOptionalDelay(pickSmall ? this.snowmanSmall : this.snowmanBig);
+    } else {
+      startWithOptionalDelay(this.snowmanSmall);
+      startWithOptionalDelay(this.snowmanBig);
     }
 
-    // Función para obtener delay aleatorio (MÁS CONSISTENTE)
+    // Funci�n para obtener delay aleatorio (M�S CONSISTENTE)
     const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
 
-    // ✅ Timer para enemigo pequeño con verificación estricta
+    // �o. Timer para enemigo peque�o con verificaci�n estricta
     this.releaseTimerSmall = this.scene.time.addEvent({
       delay: getDelay(),
       callback: () => {
         // Verificar que el timer existe y no ha sido cancelado
         if (!this.releaseTimerSmall || !this.scene) return;
         
-        // Solo spawner si no está vivo
+        // Solo spawner si no est� vivo
         if (this.snowmanSmall && !this.snowmanSmall.isAlive) {
           this.snowmanSmall.start();
         }
-        // Asignar nuevo delay ANTES de la próxima iteración
+        // Asignar nuevo delay ANTES de la pr�xima iteraci�n
         if (this.releaseTimerSmall) {
           this.releaseTimerSmall.delay = getDelay();
         }
@@ -151,18 +167,18 @@ export default class Track {
       loop: true
     });
 
-    // ✅ Timer para enemigo grande (MISMO INTERVALO que pequeño ahora)
+    // �o. Timer para enemigo grande (MISMO INTERVALO que peque�o ahora)
     this.releaseTimerBig = this.scene.time.addEvent({
       delay: getDelay(),
       callback: () => {
         // Verificar que el timer existe y no ha sido cancelado
         if (!this.releaseTimerBig || !this.scene) return;
         
-        // Solo spawner si no está vivo
+        // Solo spawner si no est� vivo
         if (this.snowmanBig && !this.snowmanBig.isAlive) {
           this.snowmanBig.start();
         }
-        // Asignar nuevo delay ANTES de la próxima iteración
+        // Asignar nuevo delay ANTES de la pr�xima iteraci�n
         if (this.releaseTimerBig) {
           this.releaseTimerBig.delay = getDelay();
         }
@@ -171,8 +187,8 @@ export default class Track {
     });
   }
 
-   stop() {
-    // ✅ Cancelar TODOS los timers de forma segura
+  stop() {
+    // âœ… Cancelar TODOS los timers de forma segura
     if (this.releaseTimerSmall) {
       this.releaseTimerSmall.remove();
       this.releaseTimerSmall = null;
@@ -187,7 +203,7 @@ export default class Track {
     if (this.snowmanBig) this.snowmanBig.stop();
   }
 
-    // ✅ NUEVO: Reiniciar con los mismos parámetros (útil para cambios de nivel)
+    // âœ… NUEVO: Reiniciar con los mismos parÃ¡metros (Ãºtil para cambios de nivel)
   restart() {
     this.start(this.currentMinDelay, this.currentMaxDelay);
   }
@@ -207,3 +223,4 @@ export default class Track {
     snowball.fire(x, this.y);
   }
 }
+
