@@ -162,8 +162,8 @@ export default class GameScene extends Phaser.Scene {
       this.registry.set('highscore', this.highscore);
     }
 
-    if (!this.level2Reached && this.score >= 100) this.reachSecondLevel();
-    if (!this.level3Reached && this.score >= 200) this.reachThirdLevel();
+    if (!this.level2Reached && this.score >= 150) this.reachSecondLevel();
+    if (!this.level3Reached && this.score >= 300) this.reachThirdLevel();
   }
 
   adjustDifficulty({ spawnMin, spawnMax, timeScale, enemySpeedSmall, enemySpeedBig }) {
