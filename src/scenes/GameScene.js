@@ -163,7 +163,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (!this.level2Reached && this.score >= 100) this.reachSecondLevel();
-    if (!this.level3Reached && this.score >= 200) this.reachThirdLevel();
+    if (!this.level3Reached && this.score >= 300) this.reachThirdLevel();
   }
 
   adjustDifficulty({ spawnMin, spawnMax, timeScale, enemySpeedSmall, enemySpeedBig }) {
@@ -668,10 +668,11 @@ hitEnemy(projectile, enemy) {
   if (!enemy.isAlive || !projectile.active) return;
 
   projectile.destroy();
+  // ? REPRODUCIR SONIDO DE GOLPE PARA CUALQUIER ENEMIGO (NORMAL O JEFE)
+  this.sound.play('enemy_kill', { volume: 0.7 });
 
   if (enemy.isBoss) {
     enemy.health = Math.max(0, enemy.health - 30);
-    this.sound.play('hit', { volume: 0.7 });
 
     enemy.play?.('final_boss_taunt', true);
 
@@ -865,37 +866,41 @@ hitEnemy(projectile, enemy) {
   }
 
   updateBossChase() {
-    if (!this.finalBosses?.length || !this.player?.isAlive || !this.tracks?.length) return;
-
-    const laneYs = this.tracks.map(track => track?.y).filter(y => typeof y === 'number');
-    if (!laneYs.length) return;
+    if (!this.finalBosses?.length || !this.player?.isAlive) return;
 
     this.finalBosses.forEach(boss => {
       if (!boss?.isAlive || !boss.body) return;
 
-      boss.currentLaneY ??= this.closestLaneY(boss.y, laneYs);
+      // --- LÓGICA DE MOVIMIENTO MEJORADA ---
 
-      if (boss.nextLaneY == null) {
-        if (!boss.nextLaneTimer) this.scheduleBossLaneChange(boss, laneYs);
-        boss.setVelocityY(0);
+      // 1. Calcular el multiplicador de velocidad basado en la vida restante.
+      // El multiplicador va de 1.0 (vida llena) a 2.5 (poca vida).
+      const healthPercentage = Math.max(0, boss.health / boss.maxHealth);
+      const speedMultiplier = 1 + 1.5 * (1 - healthPercentage); // 1.0 a 2.5
+
+      // 2. Movimiento Vertical (Y): Perseguir el carril del jugador.
+      const targetY = this.player.currentTrack.y;
+      const dy = targetY - boss.y;
+
+      // Solo se mueve si la distancia es significativa para evitar temblores.
+      if (Math.abs(dy) > 4) {
+        const baseSpeedY = 100;
+        const velocityY = baseSpeedY * speedMultiplier * Math.sign(dy);
+        boss.setVelocityY(velocityY);
       } else {
-        const dy = boss.nextLaneY - boss.y;
-        if (Math.abs(dy) <= 2) {
-          boss.setVelocityY(0);
-          boss.setY(boss.nextLaneY);
-          boss.currentLaneY = boss.nextLaneY;
-          boss.nextLaneY = null;
-          this.scheduleBossLaneChange(boss, laneYs);
-        } else {
-          const vy = Phaser.Math.Clamp(dy, -60, 60);
-          boss.setVelocityY(vy);
-        }
+        boss.setVelocityY(0); // Detenerse al llegar al carril.
       }
 
-      const targetX = Math.max(this.player.x - 200, 180);
+      // 3. Movimiento Horizontal (X): Mantener una distancia con el jugador.
+      // El jefe intentará quedarse un poco a la izquierda del jugador.
+      const targetX = this.player.x - 250;
       const dx = targetX - boss.x;
-      const vx = Phaser.Math.Clamp(dx, -80, 80);
-      boss.setVelocityX(vx);
+      
+      const baseSpeedX = 80;
+      const velocityX = baseSpeedX * speedMultiplier * Math.sign(dx);
+      
+      // Limitar la velocidad para que no sea excesivamente rápido.
+      boss.setVelocityX(Phaser.Math.Clamp(velocityX, -200, 200));
     });
   }
 
@@ -1280,7 +1285,3 @@ hitEnemy(projectile, enemy) {
     this.victoryShown = false;
   }
 }
-
-
-
-
