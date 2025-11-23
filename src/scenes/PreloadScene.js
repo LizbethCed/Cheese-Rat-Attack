@@ -28,6 +28,8 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image("controls",        "assets/images/elementos/controls.png");
     this.load.image("gameover",        "assets/images/elementos/gameover.png");
     this.load.image("descarga",        "assets/images/elementos/you_win.png");
+    this.load.image("options",            "assets/images/elementos/options.png");
+    this.load.image("tanks",          "assets/images/elementos/tanks.png");
     this.load.image("easter_egg",      "assets/images/elementos/easter_egg.png");
 
     // =========================
