@@ -22,14 +22,21 @@ export default class MenuScene extends Phaser.Scene {
         // Detener otras músicas antes de reproducir la del menú
         this.sound.stopAll();
 
-        // Reproducir música de fondo 
+        // Reproducir música de fondo
         let music = this.sound.get('music_menu');
         if (!music) {
             music = this.sound.add('music_menu', { loop: true, volume: 0.5 });
         }
-        if (!music.isPlaying) {
+        // Intentar reproducir la música. Si el navegador lo bloquea, Phaser lo manejará.
+        if (!music.isPlaying && !this.sound.locked) {
             music.play();
         }
+        // Si el audio está bloqueado, esperamos a que el usuario interactúe para desbloquearlo.
+        this.sound.once(Phaser.Sound.Events.UNLOCKED, () => {
+            if (!music.isPlaying) {
+                music.play();
+            }
+        });
 
         const centerX = this.cameras.main.centerX;
 
