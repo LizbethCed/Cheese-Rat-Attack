@@ -1,6 +1,4 @@
-﻿// Track.js - VersiÃ³n corregida con mejor manejo de timers
-
-import Enemy from '../entities/Enemy.js';
+﻿import Enemy from '../entities/Enemy.js';
 import PlayerShoot from '../entities/PlayerShoot.js';
 import EnemyShoot from '../entities/EnemyShoot.js';
 
@@ -20,7 +18,7 @@ export default class Track {
     this.snowmanBig = new Enemy(scene, this, 'Big');
     this.snowmanSmall = new Enemy(scene, this, 'Small');
     
-    // âœ… AÃ±adirlos al grupo GLOBAL de enemigos
+    // ✅ Añadirlos al grupo GLOBAL de enemigos
     if (scene.allEnemies) {
       scene.allEnemies.add(this.snowmanBig);
       scene.allEnemies.add(this.snowmanSmall);
@@ -29,9 +27,29 @@ export default class Track {
     this.releaseTimerSmall = null;
     this.releaseTimerBig = null;
 
-    // âœ… NUEVO: Guardar configuraciÃ³n actual
+    // ✅ Configuración actual y estado
     this.currentMinDelay = 3000;
     this.currentMaxDelay = 6000;
+    this.isActive = true; // ✅ NUEVO: Tracking del estado del carril
+    this.spawnEnabled = false; // ✅ NUEVO: Control de generación
+  }
+
+  // ✅ NUEVO: Método para verificar si un enemigo puede aparecer
+  canSpawnEnemy(enemy) {
+    if (!enemy || !this.scene || !this.isActive || !this.spawnEnabled) {
+      return false;
+    }
+    
+    // ✅ CORREGIDO: Solo verificar si NO está vivo y NO está activo
+    // La posición x < 0 era demasiado restrictiva
+    return !enemy.isAlive && !enemy.active;
+  }
+
+  // ✅ Iniciar el carril (llamado desde GameScene.start())
+  start(minDelay = 1600, maxDelay = 2600) {
+    this.spawnEnabled = true;
+    this.isActive = true;
+    this.resumeSpawns(minDelay, maxDelay);
   }
 
   // Detiene solo los timers de spawn sin quitar enemigos vivos
@@ -46,51 +64,78 @@ export default class Track {
     }
   }
 
-  // Reanuda timers respetando enemigos ya presentes
-  resumeSpawns(minDelay = this.currentMinDelay, maxDelay = this.currentMaxDelay) {
-    this.currentMinDelay = minDelay;
-    this.currentMaxDelay = maxDelay;
-    const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
 
-    if (this.releaseTimerSmall) {
-      this.releaseTimerSmall.delay = getDelay();
-    } else {
-      this.releaseTimerSmall = this.scene.time.addEvent({
-        delay: getDelay(),
-        callback: () => {
-          if (!this.releaseTimerSmall || !this.scene) return;
-          if (this.snowmanSmall && !this.snowmanSmall.isAlive) {
-            this.snowmanSmall.start();
-          }
-          if (this.releaseTimerSmall) this.releaseTimerSmall.delay = getDelay();
-        },
-        loop: true
-      });
-    }
+resumeSpawns(minDelay = this.currentMinDelay, maxDelay = this.currentMaxDelay) {
+  // Actualizar configuración
+  this.currentMinDelay = minDelay;
+  this.currentMaxDelay = maxDelay;
+  this.spawnEnabled = true;
+  
+  const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
+  
+  // ✅ CRÍTICO: Multiplicadores de frecuencia
+  // Los enemigos grandes aparecen MUCHO MENOS frecuentemente
+  const smallEnemyDelayMultiplier = 1.0;     // Aparición normal
+  const bigEnemyDelayMultiplier = 3.5;       // Aparición 3.5x MENOS frecuente (mucho más rara)
 
-    if (this.releaseTimerBig) {
-      this.releaseTimerBig.delay = getDelay();
-    } else {
-      this.releaseTimerBig = this.scene.time.addEvent({
-        delay: getDelay(),
-        callback: () => {
-          if (!this.releaseTimerBig || !this.scene) return;
-          if (this.snowmanBig && !this.snowmanBig.isAlive) {
-            this.snowmanBig.start();
-          }
-          if (this.releaseTimerBig) this.releaseTimerBig.delay = getDelay();
-        },
-        loop: true
-      });
-    }
+  // ✅ Timer para enemigos pequeños (FRECUENTES)
+  if (!this.releaseTimerSmall) {
+    this.releaseTimerSmall = this.scene.time.addEvent({
+      delay: getDelay() * smallEnemyDelayMultiplier,
+      callback: () => {
+        if (!this.scene || !this.spawnEnabled) return;
+        
+        if (this.canSpawnEnemy(this.snowmanSmall)) {
+          console.log(`🔵 Spawning SMALL enemy on track ${this.id}`);
+          this.snowmanSmall.start();
+        }
+        
+        // ✅ Actualizar delay para próximo ciclo
+        if (this.releaseTimerSmall) {
+          this.releaseTimerSmall.delay = getDelay() * smallEnemyDelayMultiplier;
+        }
+      },
+      loop: true
+    });
+  } else {
+    // Si el timer ya existe, solo actualizar el delay
+    this.releaseTimerSmall.delay = getDelay() * smallEnemyDelayMultiplier;
   }
 
+  // ✅ Timer para enemigos grandes (RAROS - aparecen 3.5x menos)
+  if (!this.releaseTimerBig) {
+    this.releaseTimerBig = this.scene.time.addEvent({
+      delay: getDelay() * bigEnemyDelayMultiplier,
+      callback: () => {
+        if (!this.scene || !this.spawnEnabled) return;
+        
+        if (this.canSpawnEnemy(this.snowmanBig)) {
+          console.log(`🔴 Spawning BIG enemy on track ${this.id}`);
+          this.snowmanBig.start();
+        }
+        
+        // ✅ Actualizar delay para próximo ciclo
+        if (this.releaseTimerBig) {
+          this.releaseTimerBig.delay = getDelay() * bigEnemyDelayMultiplier;
+        }
+      },
+      loop: true
+    });
+  } else {
+    // Si el timer ya existe, solo actualizar el delay
+    this.releaseTimerBig.delay = getDelay() * bigEnemyDelayMultiplier;
+  }
+}
+
+  // ✅ MEJORADO: Ajustar velocidades de enemigos
   setEnemySpeeds({ small, big }) {
     if (typeof small === 'number') {
       this.snowmanSmall.speed = small;
 
+      // Actualizar velocidad si está caminando activamente
       if (
         this.snowmanSmall.isAlive &&
+        this.snowmanSmall.active &&
         this.snowmanSmall.previousAction === 0 &&
         this.snowmanSmall.body &&
         this.snowmanSmall.body.enable
@@ -102,8 +147,10 @@ export default class Track {
     if (typeof big === 'number') {
       this.snowmanBig.speed = big;
 
+      // Actualizar velocidad si está caminando activamente
       if (
         this.snowmanBig.isAlive &&
+        this.snowmanBig.active &&
         this.snowmanBig.previousAction === 0 &&
         this.snowmanBig.body &&
         this.snowmanBig.body.enable
@@ -113,114 +160,70 @@ export default class Track {
     }
   }
 
-     start(minDelay, maxDelay, options = {}) {
-    const {
-      initialSpawnMode = "both", // "both" | "randomOne"
-      initialDelayRange = null   // [min, max] ms or null for immediate
-    } = options;
-    // �o. CR�?TICO: Detener timers ANTES de crear nuevos
-    this.stop();
-
-    // �o. Guardar configuraci�n
-    this.currentMinDelay = minDelay;
-    this.currentMaxDelay = maxDelay;
-
-    const startWithOptionalDelay = (enemy) => {
-      if (initialDelayRange && Array.isArray(initialDelayRange) && initialDelayRange.length === 2) {
-        const [dMin, dMax] = initialDelayRange;
-        const delay = Phaser.Math.Between(dMin || 0, dMax || 0);
-        this.scene.time.delayedCall(delay, () => {
-          if (enemy && !enemy.isAlive) enemy.start();
-        });
-      } else if (!enemy.isAlive) {
-        enemy.start();
-      }
-    };
-
-    if (initialSpawnMode === "randomOne") {
-      const pickSmall = Phaser.Math.Between(0, 1) === 0;
-      startWithOptionalDelay(pickSmall ? this.snowmanSmall : this.snowmanBig);
-    } else {
-      startWithOptionalDelay(this.snowmanSmall);
-      startWithOptionalDelay(this.snowmanBig);
-    }
-
-    // Funci�n para obtener delay aleatorio (M�S CONSISTENTE)
-    const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
-
-    // �o. Timer para enemigo peque�o con verificaci�n estricta
-    this.releaseTimerSmall = this.scene.time.addEvent({
-      delay: getDelay(),
-      callback: () => {
-        // Verificar que el timer existe y no ha sido cancelado
-        if (!this.releaseTimerSmall || !this.scene) return;
-        
-        // Solo spawner si no est� vivo
-        if (this.snowmanSmall && !this.snowmanSmall.isAlive) {
-          this.snowmanSmall.start();
-        }
-        // Asignar nuevo delay ANTES de la pr�xima iteraci�n
-        if (this.releaseTimerSmall) {
-          this.releaseTimerSmall.delay = getDelay();
-        }
-      },
-      loop: true
-    });
-
-    // �o. Timer para enemigo grande (MISMO INTERVALO que peque�o ahora)
-    this.releaseTimerBig = this.scene.time.addEvent({
-      delay: getDelay(),
-      callback: () => {
-        // Verificar que el timer existe y no ha sido cancelado
-        if (!this.releaseTimerBig || !this.scene) return;
-        
-        // Solo spawner si no est� vivo
-        if (this.snowmanBig && !this.snowmanBig.isAlive) {
-          this.snowmanBig.start();
-        }
-        // Asignar nuevo delay ANTES de la pr�xima iteraci�n
-        if (this.releaseTimerBig) {
-          this.releaseTimerBig.delay = getDelay();
-        }
-      },
-      loop: true
-    });
-  }
-
+  // ✅ MEJORADO: Detener completamente el carril
   stop() {
-    // âœ… Cancelar TODOS los timers de forma segura
-    if (this.releaseTimerSmall) {
-      this.releaseTimerSmall.remove();
-      this.releaseTimerSmall = null;
-    }
-    if (this.releaseTimerBig) {
-      this.releaseTimerBig.remove();
-      this.releaseTimerBig = null;
-    }
-
-    // Detener enemigos
+    this.isActive = false;
+    this.spawnEnabled = false;
+    this.pauseSpawns();
+    
+    // Detener enemigos activos
     if (this.snowmanSmall) this.snowmanSmall.stop();
     if (this.snowmanBig) this.snowmanBig.stop();
   }
 
-    // âœ… NUEVO: Reiniciar con los mismos parÃ¡metros (Ãºtil para cambios de nivel)
-  restart() {
-    this.start(this.currentMinDelay, this.currentMaxDelay);
+  // ✅ NUEVO: Reactivar el carril
+  activate() {
+    this.isActive = true;
+    this.spawnEnabled = true;
+    if (!this.releaseTimerSmall || !this.releaseTimerBig) {
+      this.resumeSpawns();
+    }
   }
 
-
-  throwPlayerSnowball(x) {
-    const snowball = new PlayerShoot(this.scene, 0, 0, 'projectile');
-    this.scene.allPlayerProjectiles.add(snowball);
-    snowball.fire(x, this.y);
+  // ✅ NUEVO: Desactivar temporalmente (sin detener enemigos vivos)
+  deactivate() {
+    this.isActive = false;
+    this.spawnEnabled = false;
+    this.pauseSpawns();
   }
 
-  throwEnemySnowball(x) {
-    const snowball = new EnemyShoot(this.scene, x, this.y, 'projectileEnemy');
-    this.scene.add.existing(snowball);
-    this.scene.physics.add.existing(snowball);
-    this.scene.allEnemyProjectiles.add(snowball);
-    snowball.fire(x, this.y);
+  // Proyectiles del jugador
+  throwPlayerSnowball(playerX) {
+    if (!this.scene) return;
+    
+    const projectile = new PlayerShoot(this.scene, playerX, this.y, 'projectile');
+    this.scene.allPlayerProjectiles.add(projectile);
+    projectile.fire(playerX, this.y);
+  }
+
+  // Proyectiles de enemigos
+  throwEnemySnowball(enemyX) {
+    if (!this.scene) return;
+    
+    const projectile = new EnemyShoot(this.scene, enemyX, this.y, 'projectileEnemy');
+    this.scene.allEnemyProjectiles.add(projectile);
+    projectile.fire(enemyX, this.y);
+  }
+
+  // ✅ NUEVO: Forzar spawn inmediato (útil para testing o eventos especiales)
+  forceSpawn(size = 'Small') {
+    const enemy = size === 'Small' ? this.snowmanSmall : this.snowmanBig;
+    if (this.canSpawnEnemy(enemy)) {
+      enemy.start();
+      return true;
+    }
+    return false;
+  }
+
+  // ✅ NUEVO: Obtener estado del carril (útil para debugging)
+  getStatus() {
+    return {
+      id: this.id,
+      isActive: this.isActive,
+      spawnEnabled: this.spawnEnabled,
+      smallAlive: this.snowmanSmall?.isAlive || false,
+      bigAlive: this.snowmanBig?.isAlive || false,
+      hasTimers: !!(this.releaseTimerSmall && this.releaseTimerBig)
+    };
   }
 }
-

@@ -75,7 +75,7 @@ export default class GameScene extends Phaser.Scene {
     this.destroyVictoryUI();
     this.trackShuffleTimer?.remove();
     this.trackShuffleTimer = null;
-    this.trackSpawnCalls = [];
+    // this.trackSpawnCalls = []; // Ya no es necesario
     this.trackSpawnsEnabled = true;
     this.firstShuffleDone = false;
 
@@ -106,10 +106,10 @@ export default class GameScene extends Phaser.Scene {
 
     // Configuración de carriles
     this.trackConfigs = [];
-    this.trackShuffleTimer = null;
-    this.activeTrackCount = 3;
+    // this.trackShuffleTimer = null; // Ya no es necesario
+    // this.activeTrackCount = 3; // Ya no es necesario, todos los carriles estarán activos
     this.trackSpawnsEnabled = true;
-    this.trackSpawnCalls = [];
+    // this.trackSpawnCalls = []; // Ya no es necesario
     this.firstShuffleDone = false;
 
     // Crear pistas
@@ -166,35 +166,27 @@ export default class GameScene extends Phaser.Scene {
     if (!this.level3Reached && this.score >= 300) this.reachThirdLevel();
   }
 
-  adjustDifficulty({ spawnMin, spawnMax, timeScale, enemySpeedSmall, enemySpeedBig }) {
-    this.tracks.forEach(track => {
-      if (typeof track.setDifficulty === 'function') {
-        track.setDifficulty({ spawnMin, spawnMax });
-      } else if (typeof track.setSpawnRange === 'function') {
-        track.setSpawnRange(spawnMin, spawnMax);
-      }
+adjustDifficulty({ spawnMin, spawnMax, timeScale, enemySpeedSmall, enemySpeedBig }) {
+  // Aplicar configuración a TODOS los carriles activos
+  // --- LÓGICA MEJORADA PARA EVITAR APARICIONES SIMULTÁNEAS ---
+  // Se aplica un retardo aleatorio a cada carril antes de que reanude la generación.
+  this.tracks.forEach((track, index) => {
+    const staggerDelay = Phaser.Math.Between(200, 1000) + (index * 150);
 
-      if (typeof track.setEnemySpeeds === 'function') {
-        track.setEnemySpeeds({ small: enemySpeedSmall, big: enemySpeedBig });
-      }
+    this.time.delayedCall(staggerDelay, () => {
+      if (!this.scene.isActive()) return; // No hacer nada si la escena ya no está activa
+      // Pausar primero para limpiar timers antiguos
+      track.pauseSpawns();
+      // Reanudar con nuevos tiempos
+      track.resumeSpawns(spawnMin, spawnMax);
+      // Ajustar velocidades
+      track.setEnemySpeeds({ small: enemySpeedSmall, big: enemySpeedBig });
     });
-
-    // Actualizar configuración base para el shuffle aleatorio
-    this.trackConfigs = this.tracks.map(track => {
-      const existing = this.trackConfigs.find?.(cfg => cfg.track === track);
-      return {
-        track,
-        min: spawnMin,
-        max: spawnMax,
-        options: existing?.options
-      };
-    });
-    this.runRandomTrackSpawns();
-  }
+  });
+}
 
   stopTrackShuffle() {
     this.trackShuffleTimer?.remove();
-    this.trackShuffleTimer = null;
     this.trackSpawnCalls?.forEach(t => t?.remove?.());
     this.trackSpawnCalls = [];
   }
@@ -279,11 +271,13 @@ export default class GameScene extends Phaser.Scene {
 
       this.backgroundImage?.setTexture('esenario2');
 
-      this.activeTrackCount = 3;
+      // --- AUMENTO DE DIFICULTAD (NIVEL 2) ---
+      // Mantenemos 3 carriles activos, pero los enemigos aparecen más rápido.
+      // this.activeTrackCount = 3; // Ya no es necesario
       this.adjustDifficulty({
-        spawnMin: 1200,
-        spawnMax: 2400,
-        timeScale: 1.15,
+        spawnMin: 1000, // Más rápido (antes 1200)
+        spawnMax: 2000, // Más rápido (antes 2400)
+        timeScale: 1.15, // Esto no se usa actualmente, pero lo dejamos por si acaso
         enemySpeedSmall: 135,
         enemySpeedBig: 105
       });
@@ -305,62 +299,60 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
-  reachThirdLevel() {
+ reachThirdLevel() {
   this.level3Reached = true;
 
-    const applyChanges = () => {
-      this.level2Music?.stop();
-      
-      // Intentar reproducir música del nivel 3
-      try {
-        if (this.cache.audio?.exists('nivel3')) {
-          if (!this.level3Music) {
-            this.level3Music = this.sound.add('nivel3', { loop: true, volume: 0.9 });
-          }
-          this.level3Music.play();
+  const applyChanges = () => {
+    this.level2Music?.stop();
+    
+    try {
+      if (this.cache.audio?.exists('nivel3')) {
+        if (!this.level3Music) {
+          this.level3Music = this.sound.add('nivel3', { loop: true, volume: 0.9 });
         }
-      } catch (e) {}
+        this.level3Music.play();
+      }
+    } catch (e) {}
 
-      this.backgroundImage?.setTexture('nivel3');
+    this.backgroundImage?.setTexture('nivel3');
 
-      // Detener tracks actuales
-      this.tracks.forEach(track => track.stop());
-
-      // Ajustar dificultad
-      this.activeTrackCount = 3;
-      this.adjustDifficulty({
-        spawnMin: 750,
-        spawnMax: 1600,
-        timeScale: 1.3,
-        enemySpeedSmall: 170,
-        enemySpeedBig: 135
-      });
-
-
-      // Reiniciar contadores del boss
-      this.level3SmallDefeated = 0;
-      this.finalBossSpawned = false;
-      this.finalBosses = [];
-      this.clearBossUI();
-      this.updateBossCountdownText();
-    };
-
-
-    const announce = () => {
-      this.showLevelBanner({
-        text: '¡FINAL!',
-        color: '#ff5722',
-        fontSize: 52,
-        delay: 1800
-      });
-    };
-
-    this.playLevelTransition({
-      duration: 700,
-      onMidpoint: applyChanges,
-      onComplete: announce
+    // ✅ IMPORTANTE: Detener y reiniciar carriles limpiamente
+    this.tracks.forEach(track => {
+      track.stop(); // Limpia todo
     });
-  }
+
+    // ✅ Pequeña pausa antes de reactivar para evitar glitches
+    this.time.delayedCall(100, () => {
+      this.tracks.forEach(track => {
+        track.start(600, 1300); // Configuración del Nivel 3
+        track.setEnemySpeeds({ small: 170, big: 135 });
+      });
+    });
+
+    // Reiniciar contadores del boss
+    this.level3SmallDefeated = 0;
+    this.finalBossSpawned = false;
+    this.finalBosses = [];
+    this.clearBossUI();
+    this.updateBossCountdownText();
+  };
+
+  const announce = () => {
+    this.showLevelBanner({
+      text: '¡FINAL!',
+      color: '#ff5722',
+      fontSize: 52,
+      delay: 1800
+    });
+  };
+
+  this.playLevelTransition({
+    duration: 700,
+    onMidpoint: applyChanges,
+    onComplete: announce
+  });
+}
+
 
   updateBossCountdownText() {
     if (this.finalBossSpawned) {
@@ -795,75 +787,66 @@ hitEnemy(projectile, enemy) {
   }
 }
 
-  start() {
-    this.input.keyboard.removeAllListeners();
+start() {
+  this.input.keyboard.removeAllListeners();
 
-    this.tweens.add({ targets: this.infoPanel, y: 700, alpha: 0, duration: 500, ease: 'Power2' });
-    this.player.start();
+  this.tweens.add({ 
+    targets: this.infoPanel, 
+    y: 700, 
+    alpha: 0, 
+    duration: 500, 
+    ease: 'Power2' 
+  });
+  
+  this.player.start();
 
-    this.trackConfigs = [
-      { track: this.tracks[0], min: 1600, max: 2600, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } },
-      { track: this.tracks[1], min: 1500, max: 2400, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } },
-      { track: this.tracks[2], min: 1800, max: 2800, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } },
-      { track: this.tracks[3], min: 2000, max: 3000, options: { initialSpawnMode: 'randomOne', initialDelayRange: [300, 1200] } }
-    ];
-
-    this.activeTrackCount = 3; // Mantener 3 carriles activos (no los 4) para más gatos chicos
-    this.runRandomTrackSpawns();
-
-    this.input.keyboard.once('keydown-ESC', () => this.scene.start('MenuScene'));
-  }
-
-  runRandomTrackSpawns() {
-    if (!this.trackConfigs?.length || !this.trackSpawnsEnabled) return;
-
-    const shuffleAndStart = () => {
-      if (!this.trackSpawnsEnabled) return;
-      const shuffled = Phaser.Utils.Array.Shuffle([...this.trackConfigs]);
-      const chosen = shuffled.slice(0, Math.min(this.activeTrackCount, shuffled.length));
-      const rest = shuffled.slice(chosen.length);
-
-      // Pausar solo los timers de los no elegidos (sin borrar enemigos vivos)
-      rest.forEach(cfg => cfg.track?.pauseSpawns?.());
-
-      // Arrancar o reanudar solo los carriles seleccionados con un pequeño retraso aleatorio
-      chosen.forEach((cfg, index) => {
-        const delay = Phaser.Math.Between(200, 1200) + index * 180;
-        const fn = this.firstShuffleDone ? 'resumeSpawns' : 'start';
-        const timer = this.time.delayedCall(delay, () => {
-          if (!this.trackSpawnsEnabled) return;
-          cfg.track?.[fn]?.(cfg.min, cfg.max, cfg.options);
-        });
-        this.trackSpawnCalls.push(timer);
-      });
-    };
-
-    shuffleAndStart();
-    this.firstShuffleDone = true;
-
-    // Repetir el shuffle cada pocos segundos para que los carriles activos cambien dinámicamente
-    this.trackShuffleTimer?.remove();
-    this.trackShuffleTimer = this.time.addEvent({
-      delay: Phaser.Math.Between(5500, 8500),
-      loop: true,
-      callback: () => {
-        if (!this.player?.isAlive) return;
-        shuffleAndStart();
-        this.trackShuffleTimer.delay = Phaser.Math.Between(5500, 8500);
+  // ✅ Iniciar TODOS los carriles de inmediato
+  console.log('🎮 Starting all tracks...');
+  this.tracks.forEach((track, index) => {
+    console.log(`  Track ${index}: Starting with delays 1600-2600ms`);
+    track.start(1600, 2600);
+    
+    // ✅ CRÍTICO: Spawn inmediato del primer enemigo pequeño
+    // Esto asegura que haya enemigos desde el inicio
+    this.time.delayedCall(500 + (index * 300), () => {
+      if (track.snowmanSmall && !track.snowmanSmall.isAlive) {
+        console.log(`  🔵 Initial spawn SMALL on track ${index}`);
+        track.snowmanSmall.start();
       }
     });
-  }
+    
+    // Spawn inicial de enemigo grande con más delay
+    this.time.delayedCall(2000 + (index * 400), () => {
+      if (track.snowmanBig && !track.snowmanBig.isAlive) {
+        console.log(`  🔴 Initial spawn BIG on track ${index}`);
+        track.snowmanBig.start();
+      }
+    });
+  });
 
+  this.input.keyboard.once('keydown-ESC', () => this.scene.start('MenuScene'));
+}
+
+checkSpawnStatus() {
+  console.log('=== ESTADO DE CARRILES ===');
+  this.tracks.forEach(track => {
+    const status = track.getStatus();
+    console.log(`Carril ${status.id}:`, status);
+  });
+  console.log('==========================');
+}
   update() {
-    this.ensureTrackSpawnsActive();
     this.updateBossChase();
   }
 
-  ensureTrackSpawnsActive() {
-    if (this.finalBossSpawned || this.trackSpawnsEnabled) return;
-    this.trackSpawnsEnabled = true;
-    this.runRandomTrackSpawns();
-  }
+checkSpawnStatus() {
+  console.log('=== ESTADO DE CARRILES ===');
+  this.tracks.forEach(track => {
+    const status = track.getStatus();
+    console.log(`Carril ${status.id}:`, status);
+  });
+  console.log('==========================');
+}
 
   updateBossChase() {
     if (!this.finalBosses?.length || !this.player?.isAlive) return;
