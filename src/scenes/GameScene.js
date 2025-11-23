@@ -168,13 +168,20 @@ export default class GameScene extends Phaser.Scene {
 
 adjustDifficulty({ spawnMin, spawnMax, timeScale, enemySpeedSmall, enemySpeedBig }) {
   // Aplicar configuración a TODOS los carriles activos
-  this.tracks.forEach(track => {
-    // Pausar primero para limpiar timers antiguos
-    track.pauseSpawns();
-    // Reanudar con nuevos tiempos
-    track.resumeSpawns(spawnMin, spawnMax);
-    // Ajustar velocidades
-    track.setEnemySpeeds({ small: enemySpeedSmall, big: enemySpeedBig });
+  // --- LÓGICA MEJORADA PARA EVITAR APARICIONES SIMULTÁNEAS ---
+  // Se aplica un retardo aleatorio a cada carril antes de que reanude la generación.
+  this.tracks.forEach((track, index) => {
+    const staggerDelay = Phaser.Math.Between(200, 1000) + (index * 150);
+
+    this.time.delayedCall(staggerDelay, () => {
+      if (!this.scene.isActive()) return; // No hacer nada si la escena ya no está activa
+      // Pausar primero para limpiar timers antiguos
+      track.pauseSpawns();
+      // Reanudar con nuevos tiempos
+      track.resumeSpawns(spawnMin, spawnMax);
+      // Ajustar velocidades
+      track.setEnemySpeeds({ small: enemySpeedSmall, big: enemySpeedBig });
+    });
   });
 }
 

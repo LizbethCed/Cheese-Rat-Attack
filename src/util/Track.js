@@ -64,77 +64,68 @@ export default class Track {
     }
   }
 
-  // ✅ MEJORADO: Reanuda timers con mejor lógica
-  resumeSpawns(minDelay = this.currentMinDelay, maxDelay = this.currentMaxDelay) {
-    // Actualizar configuración
-    this.currentMinDelay = minDelay;
-    this.currentMaxDelay = maxDelay;
-    this.spawnEnabled = true;
-    
-    const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
-    
-    // --- LÓGICA DE FRECUENCIA ---
-    // Hacemos que los enemigos grandes sean más raros que los pequeños.
-    const bigEnemyDelayMultiplier = 1.8; // Aparecerán casi el doble de lento.
 
-    // ✅ Timer para enemigos pequeños
-    if (!this.releaseTimerSmall) {
-      this.releaseTimerSmall = this.scene.time.addEvent({
-        delay: getDelay(),
-        callback: () => {
-          if (!this.scene || !this.spawnEnabled) return;
-          
-          // ✅ Usar el nuevo método de verificación
-          if (this.canSpawnEnemy(this.snowmanSmall)) {
-            console.log(`🔵 Spawning SMALL enemy on track ${this.id}`);
-            this.snowmanSmall.start();
-          } else {
-            console.log(`⚠️ Cannot spawn SMALL on track ${this.id}:`, {
-              isAlive: this.snowmanSmall?.isAlive,
-              active: this.snowmanSmall?.active,
-              visible: this.snowmanSmall?.visible,
-              x: Math.round(this.snowmanSmall?.x || 0)
-            });
-          }
-          
-          // ✅ Siempre actualizar el delay para el próximo ciclo
-          if (this.releaseTimerSmall) {
-            this.releaseTimerSmall.delay = getDelay();
-          }
-        },
-        loop: true
-      });
-    }
+resumeSpawns(minDelay = this.currentMinDelay, maxDelay = this.currentMaxDelay) {
+  // Actualizar configuración
+  this.currentMinDelay = minDelay;
+  this.currentMaxDelay = maxDelay;
+  this.spawnEnabled = true;
+  
+  const getDelay = () => Phaser.Math.Between(minDelay, maxDelay);
+  
+  // ✅ CRÍTICO: Multiplicadores de frecuencia
+  // Los enemigos grandes aparecen MUCHO MENOS frecuentemente
+  const smallEnemyDelayMultiplier = 1.0;     // Aparición normal
+  const bigEnemyDelayMultiplier = 3.5;       // Aparición 3.5x MENOS frecuente (mucho más rara)
 
-    // ✅ Timer para enemigos grandes
-    if (!this.releaseTimerBig) {
-      this.releaseTimerBig = this.scene.time.addEvent({
-        delay: getDelay() * bigEnemyDelayMultiplier, // Aplicamos el multiplicador
-        callback: () => {
-          if (!this.scene || !this.spawnEnabled) return;
-          
-          // ✅ Usar el nuevo método de verificación
-          if (this.canSpawnEnemy(this.snowmanBig)) {
-            console.log(`🔴 Spawning BIG enemy on track ${this.id}`);
-            this.snowmanBig.start();
-          } else {
-            console.log(`⚠️ Cannot spawn BIG on track ${this.id}:`, {
-              isAlive: this.snowmanBig?.isAlive,
-              active: this.snowmanBig?.active,
-              visible: this.snowmanBig?.visible,
-              x: Math.round(this.snowmanBig?.x || 0)
-            });
-          }
-          
-          // ✅ Siempre actualizar el delay para el próximo ciclo
-          if (this.releaseTimerBig) {
-            this.releaseTimerBig.delay = getDelay() * bigEnemyDelayMultiplier;
-          }
-        },
-        loop: true
-      });
-    }
+  // ✅ Timer para enemigos pequeños (FRECUENTES)
+  if (!this.releaseTimerSmall) {
+    this.releaseTimerSmall = this.scene.time.addEvent({
+      delay: getDelay() * smallEnemyDelayMultiplier,
+      callback: () => {
+        if (!this.scene || !this.spawnEnabled) return;
+        
+        if (this.canSpawnEnemy(this.snowmanSmall)) {
+          console.log(`🔵 Spawning SMALL enemy on track ${this.id}`);
+          this.snowmanSmall.start();
+        }
+        
+        // ✅ Actualizar delay para próximo ciclo
+        if (this.releaseTimerSmall) {
+          this.releaseTimerSmall.delay = getDelay() * smallEnemyDelayMultiplier;
+        }
+      },
+      loop: true
+    });
+  } else {
+    // Si el timer ya existe, solo actualizar el delay
+    this.releaseTimerSmall.delay = getDelay() * smallEnemyDelayMultiplier;
   }
+
+  // ✅ Timer para enemigos grandes (RAROS - aparecen 3.5x menos)
+  if (!this.releaseTimerBig) {
+    this.releaseTimerBig = this.scene.time.addEvent({
+      delay: getDelay() * bigEnemyDelayMultiplier,
+      callback: () => {
+        if (!this.scene || !this.spawnEnabled) return;
+        
+        if (this.canSpawnEnemy(this.snowmanBig)) {
+          console.log(`🔴 Spawning BIG enemy on track ${this.id}`);
+          this.snowmanBig.start();
+        }
+        
+        // ✅ Actualizar delay para próximo ciclo
+        if (this.releaseTimerBig) {
+          this.releaseTimerBig.delay = getDelay() * bigEnemyDelayMultiplier;
+        }
+      },
+      loop: true
+    });
+  } else {
+    // Si el timer ya existe, solo actualizar el delay
+    this.releaseTimerBig.delay = getDelay() * bigEnemyDelayMultiplier;
+  }
+}
 
   // ✅ MEJORADO: Ajustar velocidades de enemigos
   setEnemySpeeds({ small, big }) {
