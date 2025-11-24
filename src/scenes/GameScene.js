@@ -803,25 +803,10 @@ start() {
   // ✅ Iniciar TODOS los carriles de inmediato
   console.log('🎮 Starting all tracks...');
   this.tracks.forEach((track, index) => {
-    console.log(`  Track ${index}: Starting with delays 1600-2600ms`);
+    // Inicia la aparición de enemigos en cada carril con un retardo aleatorio
+    // entre 1.6 y 2.6 segundos para el primer enemigo.
+    // Esto evita que todos aparezcan al mismo tiempo.
     track.start(1600, 2600);
-    
-    // ✅ CRÍTICO: Spawn inmediato del primer enemigo pequeño
-    // Esto asegura que haya enemigos desde el inicio
-    this.time.delayedCall(500 + (index * 300), () => {
-      if (track.snowmanSmall && !track.snowmanSmall.isAlive) {
-        console.log(`  🔵 Initial spawn SMALL on track ${index}`);
-        track.snowmanSmall.start();
-      }
-    });
-    
-    // Spawn inicial de enemigo grande con más delay
-    this.time.delayedCall(2000 + (index * 400), () => {
-      if (track.snowmanBig && !track.snowmanBig.isAlive) {
-        console.log(`  🔴 Initial spawn BIG on track ${index}`);
-        track.snowmanBig.start();
-      }
-    });
   });
 
   this.input.keyboard.once('keydown-ESC', () => this.scene.start('MenuScene'));
